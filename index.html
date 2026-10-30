@@ -341,6 +341,7 @@ body.is-seam-dragging .seam-grip{cursor:ns-resize}
 /* ============ seam settings ============ */
 .seam-settings{position:absolute;left:50%;bottom:calc(76px + var(--safe-b));transform:translateX(-50%);z-index:26;
   width:min(520px,calc(100% - 28px));padding:16px 18px 14px;border-radius:22px;
+  max-height:calc(100% - 120px);overflow-y:auto;overscroll-behavior:contain;
   background:rgba(255,253,249,.97);border:1px solid rgba(35,28,55,.11);
   -webkit-backdrop-filter:blur(20px) saturate(1.15);backdrop-filter:blur(20px) saturate(1.15);
   box-shadow:0 24px 70px -24px rgba(18,12,38,.55),inset 0 1px 0 #fff;
@@ -620,7 +621,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
           <section class="hero">
             <div class="eyebrow"><span class="spark">✦</span> screenshot stitcher</div>
             <h1>把零散截图，<br><span class="accent">拼成一张长图。</span></h1>
-            <p class="hero-sub">自动跳过状态栏与底部固定栏，精准识别滚动内容的重叠区域。接缝位置随手可调，长宽不同也能自动等比缩放。</p>
+            <p class="hero-sub">自动识别状态栏与底部固定栏，普通照片保持原样；裁切量与接缝位置随手可调，长宽不同也能自动等比缩放。</p>
           </section>
 
           <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="选择或拖入截图">
@@ -652,7 +653,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
           <div class="features" id="features">
             <div class="feature">
               <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/><circle cx="18" cy="12" r="2"/><circle cx="19" cy="17" r="2"/></svg></span>
-              <div><strong>跳过固定栏</strong><span>状态栏、导航栏和底部栏不参与拼接</span></div>
+              <div><strong>智能裁切固定栏</strong><span>自动识别截图的状态栏、导航栏和底部栏；普通图片保持原样，裁切量可调</span></div>
             </div>
             <div class="feature">
               <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg></span>
@@ -736,18 +737,28 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         </div>
         <div class="stage-hint" id="stageHint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>
-          <span id="hintText">拖动黄色接缝线微调，点击接缝打开设置</span>
+          <span id="hintText">拖动黄色接缝线微调，点击接缝可调裁切与重叠</span>
         </div>
       </div>
       <div class="seam-settings" id="seamSettings" hidden>
         <div class="ss-head">
           <div>
             <strong id="ssTitle">接缝 1</strong>
-            <span id="ssSub">手动调整重叠与接缝位置</span>
+            <span id="ssSub">手动调整裁切与接缝位置</span>
           </div>
           <button class="ss-close" id="ssClose" type="button" aria-label="关闭接缝设置">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>上张底部裁切</span><strong id="ssTrimBottomValue">0 px</strong></div>
+          <input type="range" id="ssTrimBottom" min="0" max="1" value="0" step="1" aria-label="上一张图片底部裁切高度">
+          <p class="ss-hint" id="ssTrimBottomHint">自动识别 0 px · 设为 0 可保留上一张底部完整画面</p>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>下张顶部裁切</span><strong id="ssTrimTopValue">0 px</strong></div>
+          <input type="range" id="ssTrimTop" min="0" max="1" value="0" step="1" aria-label="下一张图片顶部裁切高度">
+          <p class="ss-hint" id="ssTrimTopHint">自动识别 0 px · 设为 0 可保留下一张顶部完整画面</p>
         </div>
         <div class="ss-field">
           <div class="ss-label"><span>重叠高度</span><strong id="ssOverlapValue">0 px</strong></div>
@@ -935,6 +946,12 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     ssTitle: document.getElementById('ssTitle'),
     ssSub: document.getElementById('ssSub'),
     ssClose: document.getElementById('ssClose'),
+    ssTrimBottom: document.getElementById('ssTrimBottom'),
+    ssTrimBottomValue: document.getElementById('ssTrimBottomValue'),
+    ssTrimBottomHint: document.getElementById('ssTrimBottomHint'),
+    ssTrimTop: document.getElementById('ssTrimTop'),
+    ssTrimTopValue: document.getElementById('ssTrimTopValue'),
+    ssTrimTopHint: document.getElementById('ssTrimTopHint'),
     ssOverlap: document.getElementById('ssOverlap'),
     ssOverlapValue: document.getElementById('ssOverlapValue'),
     ssCut: document.getElementById('ssCut'),
@@ -1456,25 +1473,54 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     return { top, bottom };
   }
 
-  function deriveImageInsets(pairBands, count, heights) {
+  // 文件名里的截图线索：iOS「截屏 / Screenshot 2024-…」、Android「Screenshot_…」、
+  // Windows「截图…」，以及「屏幕快照」「スクリーンショット」「스크린샷」等。
+  const SCREENSHOT_NAME_RE = /(screenshot|screen[\s_-]?shot|screen[\s_-]?capture|screencap|截屏|截图|屏幕快照|スクリーンショット|스크린샷)/i;
+
+  function screenshotNameHint(name) {
+    return SCREENSHOT_NAME_RE.test(String(name || ''));
+  }
+
+  // 判断每张图是否“带固定栏的截图”。只认两种证据，宁可少裁也不误裁：
+  //   1. 像素证据：相邻两图在同一坐标上几乎不变的横条（状态栏 / 底栏）；
+  //   2. 文件名证据：名称里带 screenshot / 截屏 / 截图 等字样。
+  // 两者都没有的图片一律视为普通图片，不裁切顶部与底部，保留完整画面。
+  function deriveImageInsets(pairBands, count, heights, images = []) {
     const tops = new Array(count).fill(0);
     const bottoms = new Array(count).fill(0);
-    const globalTop = medianNumber(pairBands.map((band) => band.top).filter((value) => value >= 8));
-    const globalBottom = medianNumber(pairBands.map((band) => band.bottom).filter((value) => value >= 8));
+    const screenshot = new Array(count).fill(false);
+
+    const bandTops = pairBands.map((band) => (band && band.top >= 8 ? band.top : 0));
+    const bandBottoms = pairBands.map((band) => (band && band.bottom >= 8 ? band.bottom : 0));
+    const globalTop = medianNumber(bandTops.filter((value) => value > 0));
+    const globalBottom = medianNumber(bandBottoms.filter((value) => value > 0));
+
     for (let i = 0; i < count; i += 1) {
       const topCandidates = [];
       const bottomCandidates = [];
-      if (i > 0 && pairBands[i - 1]) {
-        topCandidates.push(pairBands[i - 1].top);
-        bottomCandidates.push(pairBands[i - 1].bottom);
+      if (i > 0) {
+        topCandidates.push(bandTops[i - 1]);
+        bottomCandidates.push(bandBottoms[i - 1]);
       }
-      if (i < pairBands.length && pairBands[i]) {
-        topCandidates.push(pairBands[i].top);
-        bottomCandidates.push(pairBands[i].bottom);
+      if (i < bandTops.length) {
+        topCandidates.push(bandTops[i]);
+        bottomCandidates.push(bandBottoms[i]);
       }
+
+      const localTop = maxPositive(topCandidates);
+      const localBottom = maxPositive(bottomCandidates);
+      const image = images[i];
+      const nameHint = image ? screenshotNameHint(image.name) : false;
+      const looksLikeScreenshot = localTop > 0 || localBottom > 0 || nameHint;
+      screenshot[i] = looksLikeScreenshot;
+      if (!looksLikeScreenshot) continue;
+
       const H = heights[i];
-      let top = clamp(maxPositive(topCandidates) || globalTop, 0, Math.floor(H * 0.32));
-      let bottom = clamp(maxPositive(bottomCandidates) || globalBottom, 0, Math.floor(H * 0.24));
+      // 本图参与检测出的固定栏优先，否则退回整批截图的中位数。
+      let top = localTop || globalTop;
+      let bottom = localBottom || globalBottom;
+      top = clamp(top, 0, Math.floor(H * 0.32));
+      bottom = clamp(bottom, 0, Math.floor(H * 0.24));
       if (top + bottom > H * 0.65) {
         top = 0;
         bottom = 0;
@@ -1482,7 +1528,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       tops[i] = top;
       bottoms[i] = bottom;
     }
-    return { top: tops, bottom: bottoms };
+    return { top: tops, bottom: bottoms, screenshot };
   }
 
   function chooseAutoCut(A, B, overlapHeight, aBottom = 0, bTop = 0) {
@@ -1683,7 +1729,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
           await sleep(0);
         }
 
-        compInsets = deriveImageInsets(pairBands, imageCount, grays.map((item) => item.height));
+        compInsets = deriveImageInsets(pairBands, imageCount, grays.map((item) => item.height), state.images);
         for (let i = 0; i < imageCount; i += 1) {
           const scale = heights[i] / Math.max(1, grays[i].height);
           topInsets[i] = clamp(Math.round(compInsets.top[i] * scale), 0, heights[i]);
@@ -1736,6 +1782,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         sourceTotal,
         seams,
         insets: { top: topInsets, bottom: bottomInsets },
+        // 自动识别的裁切量留一份快照，接缝面板里的「恢复自动」以此为准
+        autoInsets: { top: topInsets.slice(), bottom: bottomInsets.slice() },
+        photoCount: (compInsets.screenshot || []).filter((value) => !value).length,
         dedupe: els.dedupeToggle.checked,
         segments: [],
         totalHeight: sourceTotal
@@ -1950,6 +1999,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         }
       }
 
+      const seamAuto = isSeamAuto(i);
+      const trimHint = seamAuto ? '' : '（含手动裁切）';
       const grip = handle.querySelector('.seam-grip');
       if (grip) {
         const label = grip.querySelector('span');
@@ -1957,9 +2008,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         grip.setAttribute('aria-label', seam.overlap > 0
           ? `接缝 ${i + 1}，重叠 ${formatNum(seam.overlap)} 像素；拖动微调，点击打开接缝设置`
           : `接缝 ${i + 1}，暂无重叠；点击打开接缝设置以手动添加重叠`);
-        grip.title = seam.overlap > 0 ? '拖动微调；点击打开接缝设置' : '点击手动设置重叠区域';
+        grip.title = (seam.overlap > 0 ? '拖动微调；点击打开接缝设置' : '点击手动设置重叠区域') + trimHint;
       }
-      handle.classList.toggle('low', Boolean(seam.low) && seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap);
+      handle.classList.toggle('low', Boolean(seam.low) && seamAuto);
       handle.classList.toggle('no-overlap', seam.overlap <= 0);
     }
   }
@@ -1970,9 +2021,11 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const seams = stitch.seams;
     const imageCount = stitch.heights.length;
     const overlapSum = seams.reduce((sum, seam) => sum + seam.overlap, 0);
-    const manualCount = seams.filter((seam) => seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap).length;
-    const lowCount = seams.filter((seam) => seam.low && seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap).length;
+    const manualCount = seams.filter((_, index) => !isSeamAuto(index)).length;
+    const lowCount = seams.filter((seam, index) => seam.low && isSeamAuto(index)).length;
     const dedupeOn = stitch.dedupe !== false;
+    const photoCount = stitch.photoCount || 0;
+    const imageUnit = photoCount > 0 ? '张图片' : '张截图';
     const percent = stitch.sourceTotal ? Math.round((overlapSum / stitch.sourceTotal) * 100) : 0;
     const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
     const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
@@ -1980,10 +2033,11 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     for (let i = 1; i < imageCount; i += 1) fixedRemoved += topInsets[i] || 0;
     for (let i = 0; i < imageCount - 1; i += 1) fixedRemoved += bottomInsets[i] || 0;
 
-    const parts = [`${imageCount} 张截图`];
+    const parts = [`${imageCount} ${imageUnit}`];
     if (overlapSum > 0) parts.push(`去除重叠 ${formatNum(overlapSum)} px${percent ? `（${percent}%）` : ''}`);
     else if (imageCount > 1) parts.push(dedupeOn ? '未检测到重叠' : '自动去重已关闭');
     if (fixedRemoved > 0) parts.push(`跳过固定栏 ${formatNum(fixedRemoved)} px`);
+    if (photoCount > 0 && photoCount < imageCount) parts.push(`${photoCount} 张普通图片未裁切`);
     if (seams.length) parts.push(`${seams.length} 处接缝`);
     if (manualCount) parts.push(`已手动调整 ${manualCount} 处`);
     if (lowCount) parts.push(`${lowCount} 处建议复核`);
@@ -2015,7 +2069,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     } else if (fixedRemoved > 0) {
       els.barSub.textContent = `已跳过顶部/底部固定栏 ${formatNum(fixedRemoved)} px`;
     } else {
-      els.barSub.textContent = dedupeOn ? `${imageCount} 张截图 · 自动去重未发现重叠` : `${imageCount} 张截图 · 按顺序直接拼接`;
+      els.barSub.textContent = dedupeOn ? `${imageCount} ${imageUnit} · 自动去重未发现重叠` : `${imageCount} ${imageUnit} · 按顺序直接拼接`;
     }
     els.restoreBtn.disabled = manualCount === 0;
     els.restoreBtnBottom.disabled = manualCount === 0;
@@ -2025,7 +2079,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     } else if (manualCount) {
       els.hintText.textContent = '已手动调整 · 点击接缝可继续打开设置';
     } else {
-      els.hintText.textContent = '拖动黄色接缝线微调，点击接缝打开设置';
+      els.hintText.textContent = '拖动黄色接缝线微调，点击接缝可调裁切与重叠';
     }
   }
 
@@ -2040,6 +2094,21 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         changed = true;
       }
     });
+    // 顶部/底部的裁切量也属于可调参数，一并恢复
+    if (stitch.autoInsets && stitch.insets) {
+      for (let i = 0; i < stitch.heights.length; i += 1) {
+        const topValue = (stitch.autoInsets.top && stitch.autoInsets.top[i]) || 0;
+        const bottomValue = (stitch.autoInsets.bottom && stitch.autoInsets.bottom[i]) || 0;
+        if ((stitch.insets.top && stitch.insets.top[i]) !== topValue) {
+          stitch.insets.top[i] = topValue;
+          changed = true;
+        }
+        if ((stitch.insets.bottom && stitch.insets.bottom[i]) !== bottomValue) {
+          stitch.insets.bottom[i] = bottomValue;
+          changed = true;
+        }
+      }
+    }
     if (!changed) {
       showToast('接缝已经是自动位置', 'info');
       return;
@@ -2049,6 +2118,49 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     updateEditorMeta();
     refreshSeamSettings();
     showToast('已恢复自动接缝', 'success');
+  }
+
+  // 一处接缝涉及两张图：上一张的底部裁切量与下一张的顶部裁切量。
+  // 手动改过裁切量的接缝不再算“自动状态”。
+  function isSeamAuto(index) {
+    const stitch = state.stitch;
+    if (!stitch || !stitch.seams[index]) return true;
+    const seam = stitch.seams[index];
+    if (seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap) return false;
+    const insets = stitch.insets || {};
+    const auto = stitch.autoInsets || insets;
+    const bottomA = (insets.bottom && insets.bottom[index]) || 0;
+    const topB = (insets.top && insets.top[index + 1]) || 0;
+    const autoBottomA = (auto.bottom && auto.bottom[index]) || 0;
+    const autoTopB = (auto.top && auto.top[index + 1]) || 0;
+    return bottomA === autoBottomA && topB === autoTopB;
+  }
+
+  // 裁切量的可调上限：单边最多 45%，两张图各自至少保留 10% 内容。
+  function getSeamTrimBounds(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return { bottomA: 0, topB: 0 };
+    const hA = stitch.heights[index] || 0;
+    const hB = stitch.heights[index + 1] || 0;
+    return {
+      bottomA: Math.max(0, Math.floor(hA * 0.45)),
+      topB: Math.max(0, Math.floor(hB * 0.45))
+    };
+  }
+
+  function clampSeamToInsets(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return;
+    const maxOverlap = getSeamMaxOverlap(index);
+    const seam = stitch.seams[index];
+    if (seam.overlap > maxOverlap) seam.overlap = maxOverlap;
+    seam.cut = clamp(seam.cut, 0, seam.overlap);
+  }
+
+  // 图片 k 的上下裁切量变化后，seam k-1（作为下一张）与 seam k（作为上一张）的可用重叠都会变
+  function clampSeamsAroundImage(k) {
+    clampSeamToInsets(k - 1);
+    clampSeamToInsets(k);
   }
 
   function getSeamMaxOverlap(index) {
@@ -2073,11 +2185,35 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const index = state.activeSeam;
     if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
     const seam = stitch.seams[index];
+    const insets = stitch.insets || {};
+    const auto = stitch.autoInsets || insets;
     const maxOverlap = getSeamMaxOverlap(index);
-    const manual = seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap;
+    const bounds = getSeamTrimBounds(index);
+    const bottomA = (insets.bottom && insets.bottom[index]) || 0;
+    const topB = (insets.top && insets.top[index + 1]) || 0;
+    const autoBottomA = (auto.bottom && auto.bottom[index]) || 0;
+    const autoTopB = (auto.top && auto.top[index + 1]) || 0;
+    const manual = !isSeamAuto(index);
     const autoLabel = seam.autoOverlap > 0 ? `自动识别重叠 ${formatNum(seam.autoOverlap)} px` : '自动未识别到重叠';
     els.ssTitle.textContent = `接缝 ${index + 1}`;
-    els.ssSub.textContent = `第 ${index + 1} 与第 ${index + 2} 张截图之间 · ${autoLabel}${manual ? ' · 已手动调整' : ''}`;
+    els.ssSub.textContent = `第 ${index + 1} 与第 ${index + 2} 张之间 · ${autoLabel}${manual ? ' · 已手动调整' : ''}`;
+
+    els.ssTrimBottom.max = String(Math.max(1, bounds.bottomA));
+    els.ssTrimBottom.value = String(bottomA);
+    els.ssTrimBottom.disabled = bounds.bottomA <= 0;
+    els.ssTrimBottomValue.textContent = `${formatNum(bottomA)} px`;
+    els.ssTrimBottomHint.textContent = autoBottomA > 0
+      ? `自动识别 ${formatNum(autoBottomA)} px · 设为 0 可保留上一张底部完整画面`
+      : '未检测到底部固定栏 · 可按需手动裁切上一张底部';
+
+    els.ssTrimTop.max = String(Math.max(1, bounds.topB));
+    els.ssTrimTop.value = String(topB);
+    els.ssTrimTop.disabled = bounds.topB <= 0;
+    els.ssTrimTopValue.textContent = `${formatNum(topB)} px`;
+    els.ssTrimTopHint.textContent = autoTopB > 0
+      ? `自动识别 ${formatNum(autoTopB)} px · 设为 0 可保留下一张顶部完整画面`
+      : '未检测到顶部固定栏 · 可按需手动裁切下一张顶部';
+
     els.ssOverlap.max = String(Math.max(1, maxOverlap));
     els.ssOverlap.value = String(seam.overlap);
     els.ssOverlap.disabled = maxOverlap <= 0;
@@ -2176,17 +2312,57 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     refreshSeamSettings();
   }
 
+  // 上一张图片底部的裁切量（例如底部 Tab 栏 / 导航栏）
+  function applySeamBottomTrim(value) {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    if (!stitch.insets || !stitch.insets.bottom) return;
+    const bounds = getSeamTrimBounds(index);
+    const next = clamp(Math.round(Number(value) || 0), 0, bounds.bottomA);
+    if (next === (stitch.insets.bottom[index] || 0)) {
+      refreshSeamSettings();
+      return;
+    }
+    stitch.insets.bottom[index] = next;
+    clampSeamsAroundImage(index);
+    refreshSeamSettings();
+    scheduleSeamGeometry();
+  }
+
+  // 下一张图片顶部的裁切量（例如状态栏 / 顶部导航）
+  function applySeamTopTrim(value) {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    if (!stitch.insets || !stitch.insets.top) return;
+    const bounds = getSeamTrimBounds(index);
+    const next = clamp(Math.round(Number(value) || 0), 0, bounds.topB);
+    if (next === (stitch.insets.top[index + 1] || 0)) {
+      refreshSeamSettings();
+      return;
+    }
+    stitch.insets.top[index + 1] = next;
+    clampSeamsAroundImage(index + 1);
+    refreshSeamSettings();
+    scheduleSeamGeometry();
+  }
+
   function restoreActiveSeam() {
     const stitch = state.stitch;
     const index = state.activeSeam;
     if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
-    const seam = stitch.seams[index];
-    if (seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap) {
+    if (isSeamAuto(index)) {
       showToast('这处接缝已经是自动位置', 'info');
       return;
     }
+    const seam = stitch.seams[index];
     seam.overlap = seam.autoOverlap;
     seam.cut = seam.autoCut;
+    if (stitch.autoInsets && stitch.insets) {
+      stitch.insets.bottom[index] = (stitch.autoInsets.bottom && stitch.autoInsets.bottom[index]) || 0;
+      stitch.insets.top[index + 1] = (stitch.autoInsets.top && stitch.autoInsets.top[index + 1]) || 0;
+    }
     scheduleSeamGeometry();
     refreshSeamSettings();
     showToast(`接缝 ${index + 1} 已恢复自动`, 'success');
@@ -2334,7 +2510,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       for (let i = 0; i < stitch.heights.length - 1; i += 1) fixedRemoved += stitch.insets.bottom[i] || 0;
     }
     els.exportDims.textContent = `${formatNum(plan.width)} × ${formatNum(plan.height)} px`;
-    els.exportMeta.textContent = `${stitch.heights.length} 张截图 · ${overlapSum > 0 ? `去除重叠 ${formatNum(overlapSum)} px` : '保留原始顺序'}${fixedRemoved > 0 ? ` · 固定栏 ${formatNum(fixedRemoved)} px` : ''}`;
+    const exportPhotoCount = stitch.photoCount || 0;
+    const exportUnit = exportPhotoCount > 0 ? '张图片' : '张截图';
+    els.exportMeta.textContent = `${stitch.heights.length} ${exportUnit} · ${overlapSum > 0 ? `去除重叠 ${formatNum(overlapSum)} px` : '保留原始顺序'}${fixedRemoved > 0 ? ` · 固定栏 ${formatNum(fixedRemoved)} px` : ''}${exportPhotoCount > 0 ? ` · ${exportPhotoCount} 张未裁切` : ''}`;
     els.exportNote.hidden = !plan.downscaled;
     if (plan.downscaled) {
       els.exportNote.textContent = `受浏览器画布上限限制，长图会自动等比缩放到 ${formatNum(plan.width)} × ${formatNum(plan.height)} px。如需更大尺寸，可减少截图数量或降低统一宽度。`;
@@ -2977,6 +3155,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.seamLayer.addEventListener('keydown', onSeamKeyDown);
     els.ssClose.addEventListener('click', closeSeamSettings);
     els.ssDone.addEventListener('click', closeSeamSettings);
+    els.ssTrimBottom.addEventListener('input', () => applySeamBottomTrim(els.ssTrimBottom.value));
+    els.ssTrimTop.addEventListener('input', () => applySeamTopTrim(els.ssTrimTop.value));
     els.ssOverlap.addEventListener('input', () => applySeamOverlap(els.ssOverlap.value));
     els.ssCut.addEventListener('input', () => applySeamCut(els.ssCut.value));
     els.ssAuto.addEventListener('click', restoreActiveSeam);
