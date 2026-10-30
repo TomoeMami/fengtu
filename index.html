@@ -1,0 +1,3070 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3efe7">
+<meta name="color-scheme" content="light">
+<title>缝图 · 长图拼接</title>
+<style>
+/* ============ base ============ */
+:root{
+  --bg:#f3efe7;
+  --surface:#fffdf9;
+  --surface-2:#f8f4ed;
+  --ink:#1d1a26;
+  --ink-soft:#413b4f;
+  --muted:#817b8c;
+  --line:rgba(35,28,55,.09);
+  --line-strong:rgba(35,28,55,.15);
+  --brand:#6c4bf4;
+  --brand-deep:#5332e0;
+  --brand-soft:#efeaff;
+  --yellow:#ffcd38;
+  --yellow-deep:#edb200;
+  --danger:#c53b2f;
+  --success:#16784a;
+  --shadow:0 24px 70px -35px rgba(46,30,95,.32);
+  --topbar-h:62px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --radius-xl:30px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(1000px 640px at 88% -12%, rgba(108,75,244,.13), transparent 62%),
+    radial-gradient(900px 640px at -8% 104%, rgba(255,191,34,.13), transparent 62%),
+    var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer;padding:0}
+img{max-width:100%}
+::selection{background:rgba(108,75,244,.22)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;isolation:isolate}
+.main{flex:1;min-height:0;display:flex;position:relative}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column}
+.svg-icon{width:20px;height:20px;display:block;flex:none}
+
+/* ============ topbar ============ */
+.topbar{
+  flex:none;height:var(--topbar-h);position:relative;z-index:40;
+  border-bottom:1px solid rgba(35,28,55,.055);
+  background:rgba(243,239,231,.78);
+  -webkit-backdrop-filter:blur(18px) saturate(1.2);
+  backdrop-filter:blur(18px) saturate(1.2);
+}
+.topbar-inner{height:100%;max-width:1120px;margin:0 auto;padding:0 22px;display:flex;align-items:center;gap:12px;position:relative}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:#fff;flex:none;
+  background:linear-gradient(145deg,#8a6bff,#5938e8);
+  box-shadow:0 8px 20px -8px rgba(83,50,224,.85), inset 0 1px 0 rgba(255,255,255,.28);
+}
+.brand-mark svg{width:18px;height:18px}
+.brand-name{font-weight:800;font-size:16px;letter-spacing:-.03em}
+.brand-tag{font-size:11px;font-weight:600;color:var(--muted);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.68);border:1px solid var(--line)}
+.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--ink-soft);
+  background:rgba(255,255,255,.68);border:1px solid var(--line);transition:background .18s,transform .18s,border-color .18s;
+}
+.icon-btn:hover{background:#fff;border-color:var(--line-strong);transform:translateY(-1px)}
+.back-btn{margin-left:-4px}
+.editor-title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px;font-weight:750;letter-spacing:-.01em;white-space:nowrap}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.local-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:650;color:#4c6657;
+  background:rgba(255,255,255,.62);border:1px solid rgba(35,28,55,.07)
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 4px rgba(47,191,113,.13);flex:none}
+.top-export{font-size:13px;font-weight:750;color:var(--brand-deep);padding:8px 14px;border-radius:999px;background:#fff;border:1px solid rgba(108,75,244,.15);
+  box-shadow:0 6px 18px -12px rgba(83,50,224,.55);transition:transform .18s,box-shadow .18s;
+}
+.top-export:hover{transform:translateY(-1px);box-shadow:0 9px 22px -12px rgba(83,50,224,.7)}
+
+/* ============ home ============ */
+.home-screen{overflow:hidden}
+.home-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(35,28,55,.18) transparent}
+.home-scroll::-webkit-scrollbar{width:10px}
+.home-scroll::-webkit-scrollbar-thumb{background:rgba(35,28,55,.14);border:3px solid transparent;background-clip:content-box;border-radius:99px}
+.home-inner{width:100%;max-width:880px;margin:0 auto;padding:46px 24px 32px}
+.hero{text-align:center;max-width:760px;margin:0 auto 32px}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-size:11px;font-weight:750;letter-spacing:.08em;
+  color:var(--brand-deep);background:rgba(255,255,255,.62);border:1px solid rgba(108,75,244,.15);text-transform:uppercase;
+}
+.eyebrow .spark{font-size:13px;color:var(--brand);line-height:1}
+.hero h1{margin:18px 0 14px;font-size:clamp(40px,6.8vw,68px);line-height:1.05;letter-spacing:-.055em;font-weight:850;color:var(--ink)}
+.hero h1 .accent{color:var(--brand);position:relative;display:inline-block;padding:0 .035em;
+  background:linear-gradient(180deg,transparent 63%,rgba(255,205,56,.58) 63%,rgba(255,205,56,.58) 90%,transparent 90%);
+}
+.hero-sub{max-width:560px;margin:0 auto;color:var(--muted);font-size:15px;line-height:1.75;letter-spacing:.005em}
+.home-screen.has-images .hero{margin-bottom:22px}
+.home-screen.has-images .hero h1{font-size:clamp(26px,4vw,38px);margin:10px 0 0}
+.home-screen.has-images .eyebrow,
+.home-screen.has-images .hero-sub{display:none}
+
+.dropzone{
+  position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px;
+  padding:34px 38px;border-radius:var(--radius-xl);cursor:pointer;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,253,249,.96),rgba(255,252,246,.86));
+  border:1.5px dashed rgba(108,75,244,.28);
+  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.9);
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s,box-shadow .25s;
+  animation:riseIn .65s cubic-bezier(.2,.8,.2,1) both .04s;
+}
+.dropzone::before{content:"";position:absolute;width:360px;height:360px;right:-100px;top:-150px;border-radius:50%;
+  background:radial-gradient(circle,rgba(108,75,244,.13),transparent 68%);pointer-events:none;
+}
+.dropzone:hover,.dropzone.drag-over{transform:translateY(-2px);border-color:rgba(108,75,244,.66);box-shadow:0 30px 80px -36px rgba(56,35,135,.42), inset 0 1px 0 #fff}
+.dropzone.drag-over{background:linear-gradient(180deg,#fffdfa,#f7f2ff)}
+.dz-copy{position:relative;z-index:2;min-width:0}
+.dz-kicker{font-size:11px;font-weight:750;letter-spacing:.14em;color:var(--brand);text-transform:uppercase;margin-bottom:9px}
+.dropzone h2{margin:0 0 8px;font-size:clamp(23px,3vw,30px);line-height:1.25;letter-spacing:-.035em;font-weight:820}
+.dropzone p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.dz-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:17px}
+.dz-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:600;color:#6b6576;background:rgba(35,28,55,.045)}
+.dz-chip.warm{color:#7a5d00;background:rgba(255,205,56,.18)}
+.demo-btn{display:inline-flex;align-items:center;gap:7px;margin-top:18px;padding:9px 14px;border-radius:11px;font-size:12.5px;font-weight:700;
+  color:var(--brand-deep);background:var(--brand-soft);border:1px solid rgba(108,75,244,.12);transition:background .18s,transform .18s;
+}
+.demo-btn:hover{background:#e7e0ff;transform:translateY(-1px)}
+.demo-btn svg{width:15px;height:15px}
+.dz-art{position:relative;width:196px;height:164px;flex:none;z-index:1}
+.shot-stack{position:absolute;inset:0}
+.mini-shot{position:absolute;width:88px;height:124px;border-radius:13px;background:#fff;padding:8px;overflow:hidden;
+  border:1px solid rgba(35,28,55,.08);box-shadow:0 14px 28px -15px rgba(40,28,90,.42);
+}
+.mini-shot .ms-top{height:6px;border-radius:99px;background:#e8e2f7;width:46%}
+.mini-shot .ms-hero{height:38px;border-radius:8px;margin-top:8px}
+.mini-shot .ms-line{height:5px;border-radius:99px;background:#ece7f4;margin-top:7px}
+.mini-shot .ms-line.w70{width:70%}
+.mini-shot .ms-line.w48{width:48%}
+.mini-shot .ms-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+.mini-shot .ms-grid i{display:block;height:22px;border-radius:6px;background:#f1ecfa}
+.mini-shot.a{left:8px;top:22px;transform:rotate(-11deg);z-index:1}
+.mini-shot.b{left:53px;top:9px;transform:rotate(-1deg);z-index:2}
+.mini-shot.c{left:98px;top:20px;transform:rotate(10deg);z-index:3}
+.mini-shot.a .ms-hero{background:linear-gradient(160deg,#f7c989,#ef9f92)}
+.mini-shot.b .ms-hero{background:linear-gradient(160deg,#96cfd4,#7ba8b9)}
+.mini-shot.c .ms-hero{background:linear-gradient(160deg,#b9b0f6,#8a76dc)}
+.dz-plus{position:absolute;right:7px;bottom:5px;z-index:5;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(145deg,#8162ff,#5d3be8);border:3px solid #fffdf9;box-shadow:0 10px 22px -8px rgba(83,50,224,.7);
+}
+.dz-plus svg{width:19px;height:19px}
+.dropzone .seam-spark{position:absolute;left:38%;top:11px;width:96px;height:2px;background:repeating-linear-gradient(90deg,var(--yellow) 0 7px,transparent 7px 12px);
+  transform:rotate(-7deg);opacity:.8;filter:drop-shadow(0 0 5px rgba(255,205,56,.6));
+}
+
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;animation:riseIn .7s cubic-bezier(.2,.8,.2,1) both .12s}
+.feature{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;border-radius:17px;background:rgba(255,253,249,.55);border:1px solid rgba(35,28,55,.06)}
+.feature-icon{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--brand);background:rgba(108,75,244,.09);flex:none}
+.feature-icon svg{width:16px;height:16px}
+.feature strong{display:block;font-size:12.5px;font-weight:750;margin-top:1px}
+.feature span{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+
+/* selection */
+.selection-panel{margin-top:4px;animation:riseIn .45s cubic-bezier(.2,.8,.2,1) both}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.section-head h2{margin:0;font-size:20px;letter-spacing:-.025em;font-weight:800}
+.section-head h2 .count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;margin-left:4px;border-radius:8px;font-size:11px;font-weight:800;color:var(--brand-deep);background:var(--brand-soft);vertical-align:2px}
+.section-head p{margin:5px 0 0;font-size:12px;color:var(--muted)}
+.head-actions{display:flex;align-items:center;gap:4px;flex:none}
+.text-btn{font-size:12px;font-weight:700;color:var(--ink-soft);padding:8px 10px;border-radius:9px;transition:background .18s,color .18s;white-space:nowrap}
+.text-btn:hover{background:rgba(35,28,55,.055);color:var(--ink)}
+.text-btn.accent{color:var(--brand-deep);background:rgba(108,75,244,.08)}
+.text-btn.accent:hover{background:rgba(108,75,244,.14)}
+.text-btn:disabled{opacity:.38;cursor:not-allowed}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:13px;margin-top:15px}
+.thumb{position:relative;background:rgba(255,253,249,.92);border:1px solid rgba(35,28,55,.08);border-radius:18px;padding:6px;cursor:grab;
+  box-shadow:0 12px 30px -25px rgba(46,30,95,.35);transition:transform .2s,box-shadow .2s,border-color .2s;
+}
+.thumb:hover{transform:translateY(-2px);box-shadow:0 18px 36px -24px rgba(46,30,95,.4);border-color:rgba(35,28,55,.14)}
+.thumb.dragging{opacity:.4;transform:scale(.98);cursor:grabbing}
+.thumb.drop-target{border-color:var(--brand);box-shadow:0 0 0 2px rgba(108,75,244,.18)}
+.thumb-media{position:relative;aspect-ratio:3/4;border-radius:13px;overflow:hidden;background-color:#ede8f2;
+  background-image:linear-gradient(45deg,rgba(255,255,255,.55) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.55) 75%),linear-gradient(45deg,rgba(255,255,255,.55) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.55) 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px;
+}
+.thumb-media img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;pointer-events:none}
+.thumb-num{position:absolute;left:6px;top:6px;min-width:22px;height:22px;padding:0 6px;border-radius:7px;display:grid;place-items:center;
+  font-size:10.5px;font-weight:800;color:#fff;background:rgba(20,16,31,.58);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)
+}
+.thumb-del{position:absolute;right:6px;top:6px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:rgba(20,16,31,.58);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .18s,transform .18s;
+}
+.thumb-del:hover{background:#c53b2f;transform:scale(1.06)}
+.thumb-del svg{width:12px;height:12px}
+.thumb-nav{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:rgba(20,16,31,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;transition:opacity .18s,background .18s;
+}
+.thumb-nav:hover{background:rgba(20,16,31,.8)}
+.thumb-nav.prev{left:6px}
+.thumb-nav.next{right:6px}
+.thumb-nav svg{width:13px;height:13px}
+.thumb:hover .thumb-nav,.thumb:focus-within .thumb-nav{opacity:1}
+.thumb-meta{display:flex;align-items:baseline;gap:7px;padding:8px 4px 3px;min-width:0}
+.thumb-name{flex:1;min-width:0;font-size:10.5px;font-weight:650;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb-dims{font-size:9.5px;font-weight:600;color:var(--muted);white-space:nowrap;flex:none}
+.add-tile{min-height:100%;aspect-ratio:3/4;border:1.5px dashed rgba(108,75,244,.26);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  color:var(--muted);background:rgba(255,253,249,.36);transition:background .2s,border-color .2s,color .2s;
+}
+.add-tile:hover{border-color:var(--brand);color:var(--brand-deep);background:rgba(255,253,249,.8)}
+.add-tile .plus-ring{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1px solid var(--line);color:var(--brand)}
+.add-tile .plus-ring svg{width:18px;height:18px}
+.add-tile span{font-size:11.5px;font-weight:700}
+.add-tile small{font-size:10px;color:var(--muted);font-weight:500}
+
+.options-card{margin-top:17px;border-radius:22px;background:rgba(255,253,249,.72);border:1px solid rgba(35,28,55,.075);padding:3px 18px;box-shadow:0 16px 44px -36px rgba(46,30,95,.32)}
+.option-row{display:flex;align-items:center;gap:13px;padding:14px 0;min-height:66px}
+.option-row + .option-row{border-top:1px solid var(--line)}
+.option-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:var(--brand);background:var(--brand-soft);flex:none}
+.option-icon svg{width:17px;height:17px}
+.option-text{flex:1;min-width:0}
+.option-text strong{display:block;font-size:13px;font-weight:750;letter-spacing:-.005em}
+.option-text span{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.45}
+.select-wrap{position:relative;flex:none}
+.select-wrap select{appearance:none;-webkit-appearance:none;border:1px solid rgba(35,28,55,.1);background:#f6f2eb;border-radius:10px;
+  padding:8px 30px 8px 11px;font-size:11.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;outline:none;
+}
+.select-wrap::after{content:"";position:absolute;right:11px;top:50%;width:6px;height:6px;border-right:1.5px solid #8c8499;border-bottom:1.5px solid #8c8499;transform:translateY(-65%) rotate(45deg);pointer-events:none}
+.switch{position:relative;width:42px;height:25px;flex:none;display:inline-block}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:2}
+.switch .track{position:absolute;inset:0;border-radius:999px;background:#ddd6e6;transition:background .2s;box-shadow:inset 0 1px 2px rgba(35,28,55,.12)}
+.switch .track::after{content:"";position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:transform .22s cubic-bezier(.2,.8,.2,1);box-shadow:0 2px 5px rgba(35,28,55,.2)}
+.switch input:checked + .track{background:var(--brand)}
+.switch input:checked + .track::after{transform:translateX(17px)}
+.switch input:focus-visible + .track{outline:2px solid var(--brand);outline-offset:2px}
+
+/* home footer */
+.home-footer{flex:none;position:relative;z-index:10;padding:12px 22px calc(15px + var(--safe-b))}
+.footer-inner{max-width:832px;margin:0 auto;display:flex;align-items:center;gap:16px;justify-content:space-between;
+  padding:10px 10px 10px 18px;border-radius:21px;background:rgba(255,253,249,.86);border:1px solid rgba(35,28,55,.08);
+  -webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2);
+  box-shadow:0 20px 55px -34px rgba(46,30,95,.45), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.footer-status{display:flex;align-items:center;gap:11px;min-width:0}
+.footer-dot{width:9px;height:9px;border-radius:50%;background:#d2ccdc;flex:none;transition:background .2s,box-shadow .2s}
+.footer-dot.ready{background:var(--brand);box-shadow:0 0 0 4px rgba(108,75,244,.12)}
+.footer-copy{min-width:0}
+.footer-copy strong{display:block;font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.footer-copy span{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.primary-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:none;border-radius:15px;padding:13px 20px;font-size:13.5px;font-weight:750;letter-spacing:-.01em;color:#fff;
+  background:linear-gradient(135deg,#8061ff,#5b38e8);box-shadow:0 12px 26px -12px rgba(83,50,224,.72), inset 0 1px 0 rgba(255,255,255,.24);
+  transition:transform .18s,box-shadow .18s,filter .18s;
+}
+.primary-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 16px 32px -13px rgba(83,50,224,.82), inset 0 1px 0 rgba(255,255,255,.24)}
+.primary-btn:active:not(:disabled){transform:translateY(0) scale(.99)}
+.primary-btn:disabled{background:#dcd7e3;color:#fff;box-shadow:none;cursor:not-allowed;filter:none}
+.primary-btn svg{width:16px;height:16px}
+.primary-btn.compact{padding:12px 18px;font-size:13px}
+.home-footer .primary-btn{min-width:150px}
+
+/* ============ editor ============ */
+.editor-screen{position:relative;background:linear-gradient(180deg,rgba(243,239,231,.3),rgba(243,239,231,1) 65%);overflow:hidden}
+.editor-meta{flex:none;width:100%;max-width:1040px;margin:0 auto;padding:12px 24px 9px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.meta-line{display:flex;align-items:center;flex-wrap:wrap;gap:9px;min-width:0}
+.status-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#14663f;background:#e6f7ed;white-space:nowrap}
+.status-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#24a765;flex:none;box-shadow:0 0 0 3px rgba(36,167,101,.12)}
+.status-pill.warn{color:#8b5a00;background:#fff4d4}
+.status-pill.warn::before{background:#e4a400;box-shadow:0 0 0 3px rgba(228,164,0,.12)}
+.status-pill.neutral{color:#5d556e;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.status-pill.neutral::before{background:#9a93a8;box-shadow:none}
+.meta-detail{font-size:11px;color:var(--muted);line-height:1.5;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.restore-btn{flex:none}
+.stage-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 22px 3px}
+.preview-stage{
+  flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative;overscroll-behavior:contain;
+  padding:24px;border-radius:26px;background-color:#17141f;
+  background-image:radial-gradient(rgba(255,255,255,.09) 1px, transparent 1px);
+  background-size:18px 18px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 26px 70px -40px rgba(18,12,38,.8);
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;
+}
+.preview-stage::-webkit-scrollbar{width:10px}
+.preview-stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border:3px solid transparent;background-clip:content-box;border-radius:99px}
+.long-preview{position:relative;margin:0 auto;border-radius:4px;box-shadow:0 28px 60px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06)}
+.long-preview canvas{display:block;width:100%;height:auto;border-radius:3px;background:#fff}
+#seamLayer{position:absolute;inset:0;pointer-events:none;z-index:3}
+.seam{position:absolute;left:-14px;right:-14px;height:64px;pointer-events:auto;cursor:ns-resize;touch-action:none;border-radius:14px}
+.seam::before{content:"";position:absolute;inset:3px -2px;border-radius:12px;background:transparent;transition:background .15s;pointer-events:none}
+.seam:hover::before,.seam.active::before{background:rgba(255,205,56,.07)}
+.seam-band{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,205,56,.5);border-bottom:1px dashed rgba(255,205,56,.5);
+  background:repeating-linear-gradient(45deg,rgba(255,205,56,.17) 0,rgba(255,205,56,.17) 7px,rgba(255,205,56,.06) 7px,rgba(255,205,56,.06) 14px);
+  pointer-events:none;border-radius:2px;
+}
+.seam-line{position:absolute;left:0;right:0;top:32px;height:0;border-top:3px dashed rgba(255,211,64,.98);filter:drop-shadow(0 2px 6px rgba(0,0,0,.55)) drop-shadow(0 0 8px rgba(255,205,56,.38));transition:border-color .15s}
+.seam:hover .seam-line{border-top-color:#ffe887}
+.seam-grip{position:absolute;left:50%;top:32px;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;
+  padding:8px 13px;border-radius:999px;background:linear-gradient(180deg,#ffdc62,#ffca27);color:#2a2104;
+  font-size:11.5px;font-weight:800;letter-spacing:-.005em;white-space:nowrap;pointer-events:auto;cursor:ns-resize;touch-action:none;
+  border:1px solid rgba(95,70,0,.2);box-shadow:0 8px 20px -7px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.55);
+  transition:transform .15s,box-shadow .15s,background .15s;
+}
+.seam-grip svg{width:14px;height:14px;flex:none}
+.seam-grip:hover{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 11px 24px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.55)}
+.seam.active .seam-grip{transform:translate(-50%,-50%) scale(1.08);background:linear-gradient(180deg,#ffe786,#ffca27);box-shadow:0 0 0 4px rgba(255,205,56,.2),0 12px 28px -8px rgba(0,0,0,.7)}
+.seam.active .seam-line{border-top-color:#ffd63e}
+.seam.low .seam-line{border-top-color:#ff9c42}
+.seam.low .seam-grip{background:linear-gradient(180deg,#ffd49b,#ff9d3d);color:#3a1d00}
+.seam.no-overlap{cursor:pointer}
+.seam.no-overlap .seam-grip{background:#faf8f4;color:#4d465a;cursor:pointer;box-shadow:0 8px 20px -8px rgba(0,0,0,.7),inset 0 1px 0 #fff}
+.seam.no-overlap .seam-grip:hover{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 10px 24px -9px rgba(0,0,0,.8),inset 0 1px 0 #fff}
+.seam.no-overlap .seam-line{border-top-style:dashed;border-top-color:rgba(255,255,255,.4)}
+body.is-seam-dragging{cursor:ns-resize;user-select:none}
+body.is-seam-dragging .seam-grip{cursor:ns-resize}
+.stage-hint{flex:none;height:34px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-hint svg{width:14px;height:14px;color:var(--yellow-deep);flex:none}
+.editor-bar{flex:none;width:100%;max-width:1040px;margin:0 auto;padding:7px 22px calc(14px + var(--safe-b));display:flex;align-items:center;justify-content:space-between;gap:16px}
+.bar-dims{min-width:0}
+.bar-dims strong{display:block;font-size:12.5px;font-weight:750;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-dims span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-actions{display:flex;align-items:center;gap:9px;flex:none}
+.ghost-btn{padding:11px 15px;border-radius:13px;font-size:12px;font-weight:700;color:var(--ink-soft);background:rgba(255,255,255,.66);border:1px solid var(--line);transition:background .18s}
+.ghost-btn:hover:not(:disabled){background:#fff}
+.ghost-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ============ seam settings ============ */
+.seam-settings{position:absolute;left:50%;bottom:calc(76px + var(--safe-b));transform:translateX(-50%);z-index:26;
+  width:min(520px,calc(100% - 28px));padding:16px 18px 14px;border-radius:22px;
+  background:rgba(255,253,249,.97);border:1px solid rgba(35,28,55,.11);
+  -webkit-backdrop-filter:blur(20px) saturate(1.15);backdrop-filter:blur(20px) saturate(1.15);
+  box-shadow:0 24px 70px -24px rgba(18,12,38,.55),inset 0 1px 0 #fff;
+  animation:seamPanelIn .26s cubic-bezier(.16,.84,.24,1) both;
+}
+.ss-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}
+.ss-head strong{display:block;font-size:15px;font-weight:820;letter-spacing:-.02em}
+.ss-head span{display:block;margin-top:3px;font-size:10.5px;color:var(--muted);line-height:1.45}
+.ss-close{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:#f2ede8;flex:none;transition:background .18s,color .18s}
+.ss-close:hover{background:#e9e3ee;color:var(--ink)}
+.ss-close svg{width:14px;height:14px}
+.ss-field + .ss-field{margin-top:12px}
+.ss-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:2px}
+.ss-label span{font-size:11.5px;font-weight:700;color:var(--ink-soft)}
+.ss-label strong{font-size:11px;font-weight:800;color:var(--brand-deep);font-variant-numeric:tabular-nums}
+.ss-field input[type="range"]{height:22px;margin:0}
+.ss-field input[type="range"]:disabled{opacity:.35;cursor:not-allowed}
+.ss-hint{margin:0;font-size:9.5px;line-height:1.5;color:var(--muted)}
+.ss-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.ss-actions .ghost-btn{padding:9px 13px;font-size:11.5px}
+.ss-actions .primary-btn{padding:10px 18px;font-size:12px;border-radius:12px}
+@media (max-width:600px){
+  .seam-settings{bottom:calc(68px + var(--safe-b));width:calc(100% - 20px);padding:13px 15px 12px;border-radius:19px}
+  .ss-head{margin-bottom:10px}
+  .ss-head strong{font-size:14px}
+  .ss-field + .ss-field{margin-top:10px}
+  .ss-actions{margin-top:11px}
+}
+
+/* ============ export result viewer ============ */
+.result-modal{position:fixed;inset:0;z-index:90;background:#0d0b12}
+.result-shell{height:100vh;height:100dvh;display:flex;flex-direction:column;background:#15121d;color:#fff;animation:fadeIn .22s ease both}
+.result-head{flex:none;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+  padding:calc(13px + env(safe-area-inset-top)) 20px 11px;background:rgba(21,18,29,.95);
+  border-bottom:1px solid rgba(255,255,255,.08);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+.result-head h3{margin:0;font-size:16px;font-weight:820;letter-spacing:-.02em}
+.result-head p{margin:4px 0 0;font-size:10.5px;color:rgba(255,255,255,.47);line-height:1.5}
+.result-close{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.72);background:rgba(255,255,255,.08);flex:none;transition:background .18s,color .18s}
+.result-close:hover{background:rgba(255,255,255,.15);color:#fff}
+.result-close svg{width:16px;height:16px}
+.result-viewport{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px;background:#0d0b12;text-align:center;-webkit-overflow-scrolling:touch;
+  background-image:radial-gradient(rgba(255,255,255,.055) 1px,transparent 1px);background-size:17px 17px;
+}
+#resultImage{display:block;width:100%;max-width:760px;height:auto;margin:0 auto;border-radius:3px;background:#fff;
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06);
+  -webkit-touch-callout:default;user-select:auto;
+}
+.result-footer{flex:none;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 18px calc(12px + var(--safe-b));background:rgba(21,18,29,.97);border-top:1px solid rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+.result-tip{display:flex;align-items:center;gap:10px;min-width:0}
+.result-tip-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;flex:none;color:#2a2104;background:linear-gradient(180deg,#ffe071,#ffca27);box-shadow:0 8px 18px -9px rgba(0,0,0,.65)}
+.result-tip-icon svg{width:19px;height:19px}
+.result-tip strong{display:block;font-size:11.5px;font-weight:800;color:#fff;letter-spacing:-.005em}
+.result-tip > div > span{display:block;margin-top:3px;font-size:9.5px;color:rgba(255,255,255,.45);line-height:1.45}
+.result-actions{display:flex;align-items:center;gap:8px;flex:none}
+.result-done{padding:10px 18px;border-radius:12px;font-size:12px;font-weight:750;color:#fff;background:linear-gradient(135deg,#8061ff,#5b38e8);box-shadow:0 10px 24px -12px rgba(83,50,224,.85)}
+.result-download{display:none;padding:10px 13px;border-radius:12px;font-size:11px;font-weight:700;color:rgba(255,255,255,.75);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.09);white-space:nowrap}
+.result-download:hover{background:rgba(255,255,255,.14);color:#fff}
+@media (hover:hover) and (pointer:fine){.result-download{display:inline-flex;align-items:center;gap:5px}}
+@media (max-width:600px){
+  .result-head{padding:calc(11px + env(safe-area-inset-top)) 16px 9px}
+  .result-head h3{font-size:15px}
+  .result-viewport{padding:10px}
+  .result-footer{padding:9px 13px calc(10px + var(--safe-b));gap:8px}
+  .result-tip-icon{width:34px;height:34px;border-radius:11px}
+  .result-tip strong{font-size:10.5px}
+  .result-tip > div > span{font-size:9px}
+  .result-done{padding:10px 14px;font-size:11.5px}
+  .result-download{display:none!important}
+}
+
+/* ============ modal / sheet ============ */
+.modal{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-backdrop{position:absolute;inset:0;background:rgba(22,17,34,.54);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);animation:fadeIn .25s ease both}
+.sheet{position:relative;z-index:1;width:min(468px,100%);max-height:calc(100dvh - 48px);overflow-y:auto;background:var(--surface);border-radius:28px;padding:22px 22px 20px;
+  box-shadow:0 40px 110px -22px rgba(0,0,0,.48), inset 0 1px 0 #fff;animation:sheetIn .34s cubic-bezier(.16,.84,.24,1) both;
+}
+.sheet-grab{display:none;width:38px;height:4px;border-radius:99px;background:#d9d2e5;margin:-8px auto 12px}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:17px}
+.sheet-head h3{margin:0;font-size:20px;font-weight:820;letter-spacing:-.035em}
+.sheet-head p{margin:5px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.sheet-close{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:var(--muted);background:#f4f0e9;flex:none;transition:background .18s,color .18s}
+.sheet-close:hover{background:#eae4ed;color:var(--ink)}
+.sheet-close svg{width:15px;height:15px}
+.export-summary{display:flex;align-items:center;gap:13px;padding:14px;border-radius:18px;background:linear-gradient(135deg,#f5f0ff,#fbf8ff);border:1px solid rgba(108,75,244,.1);margin-bottom:16px}
+.export-summary-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;color:var(--brand);background:#fff;box-shadow:0 8px 20px -12px rgba(83,50,224,.5);flex:none}
+.export-summary-icon svg{width:22px;height:22px}
+.export-summary strong{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.export-summary span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.field{margin-top:14px}
+.field-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.field-head label{font-size:12px;font-weight:750;color:var(--ink-soft)}
+.field-head span{font-size:11px;font-weight:700;color:var(--brand-deep)}
+.segmented{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#f2ede6;border-radius:13px;padding:4px}
+.segmented button{padding:9px 10px;border-radius:10px;font-size:12px;font-weight:750;color:var(--muted);transition:background .18s,color .18s,box-shadow .18s}
+.segmented button.active{color:var(--ink);background:#fff;box-shadow:0 3px 9px -5px rgba(35,28,55,.4)}
+input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:pointer}
+.export-note{margin-top:13px;padding:10px 12px;border-radius:11px;font-size:10.5px;line-height:1.6;color:#7a5d00;background:rgba(255,205,56,.15)}
+.export-note.info{color:#5c4c8a;background:rgba(108,75,244,.08)}
+.sheet-save{width:100%;margin-top:18px;padding:14px 18px;border-radius:15px;font-size:14px}
+.sheet-foot{margin:11px 0 0;text-align:center;font-size:10px;color:#aaa2b3;line-height:1.5}
+
+/* ============ loading ============ */
+.loading-overlay{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;background:rgba(20,15,33,.58);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:fadeIn .22s ease both}
+.loading-card{width:min(368px,100%);padding:28px 28px 24px;border-radius:27px;background:var(--surface);box-shadow:0 40px 120px -20px rgba(0,0,0,.5), inset 0 1px 0 #fff;text-align:center}
+.loader-stack{position:relative;width:128px;height:98px;margin:0 auto 20px}
+.loader-card{position:absolute;width:58px;height:80px;border-radius:9px;background:#fff;border:1px solid rgba(35,28,55,.1);box-shadow:0 10px 20px -10px rgba(35,28,55,.28);overflow:hidden;padding:6px}
+.loader-card::before{content:"";display:block;height:20px;border-radius:5px;background:linear-gradient(145deg,#c8b9fb,#8b73e7)}
+.loader-card::after{content:"";display:block;height:4px;margin-top:6px;border-radius:99px;background:#e9e3f4;box-shadow:0 8px 0 #f0ebf7,0 16px 0 #f0ebf7}
+.loader-card.lc1{left:8px;top:12px;transform:rotate(-10deg);opacity:.7;animation:floatA 2.2s ease-in-out infinite}
+.loader-card.lc2{left:50%;top:4px;transform:translateX(-50%);z-index:2;animation:floatB 2.2s ease-in-out infinite}
+.loader-card.lc3{right:8px;top:12px;transform:rotate(10deg);opacity:.7;animation:floatA 2.2s ease-in-out infinite reverse}
+.loader-card.lc2::before{background:linear-gradient(145deg,#ffd889,#f4a77f)}
+.loader-card.lc3::before{background:linear-gradient(145deg,#9fd6d7,#78aebc)}
+.loader-scan{position:absolute;left:15px;right:15px;top:48px;height:2px;border-radius:99px;background:var(--yellow);box-shadow:0 0 12px rgba(255,205,56,.9);z-index:4;animation:scanLine 1.8s ease-in-out infinite}
+.loading-title{font-size:17px;font-weight:820;letter-spacing:-.025em}
+.loading-text{margin-top:6px;font-size:11.5px;color:var(--muted);line-height:1.55;min-height:18px}
+.progress{height:7px;border-radius:99px;background:#eee8f2;overflow:hidden;margin-top:18px}
+.progress-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#8061ff,#5b38e8);transition:width .35s cubic-bezier(.2,.8,.2,1)}
+.loading-pct{margin-top:8px;font-size:10px;font-weight:750;color:var(--muted);letter-spacing:.04em}
+
+/* ============ toast ============ */
+.toast-host{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));z-index:200;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:min(90vw,430px);pointer-events:none}
+.toast{padding:11px 16px;border-radius:999px;background:#1d1927;color:#fff;font-size:12px;font-weight:600;line-height:1.35;text-align:center;
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.45);opacity:0;transform:translateY(8px) scale(.98);transition:opacity .25s,transform .25s;
+}
+.toast.show{opacity:1;transform:none}
+.toast.error{background:#b72f24}
+.toast.success{background:#177a4a}
+.toast.info{background:#2c2540}
+
+/* ============ animations ============ */
+@keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes seamPanelIn{from{opacity:0;transform:translate(-50%,14px) scale(.985)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes sheetUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
+@keyframes floatA{0%,100%{transform:rotate(-10deg) translateY(0)}50%{transform:rotate(-9deg) translateY(-4px)}}
+@keyframes floatB{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-5px)}}
+@keyframes scanLine{0%,100%{transform:translateY(-26px);opacity:0}18%{opacity:1}82%{opacity:1}50%{transform:translateY(25px)}}
+
+/* ============ responsive ============ */
+@media (max-width:760px){
+  .topbar-inner{padding:0 16px}
+  .brand-tag{display:none}
+  .local-badge{font-size:10px;padding:6px 9px}
+  .home-inner{padding:32px 18px 24px}
+  .hero{margin-bottom:25px}
+  .hero h1{margin-top:15px;font-size:clamp(36px,10vw,52px)}
+  .hero-sub{font-size:13.5px}
+  .dropzone{padding:27px 24px;grid-template-columns:minmax(0,1fr) auto;gap:8px;border-radius:26px}
+  .dz-art{width:154px;height:146px}
+  .mini-shot{width:72px;height:104px;border-radius:11px;padding:6px}
+  .mini-shot.a{left:0;top:22px}
+  .mini-shot.b{left:40px;top:11px}
+  .mini-shot.c{left:80px;top:22px}
+  .mini-shot .ms-hero{height:30px;margin-top:6px}
+  .mini-shot .ms-line{height:4px;margin-top:6px}
+  .mini-shot .ms-grid i{height:16px}
+  .dropzone h2{font-size:23px}
+  .dropzone p{font-size:12px}
+  .dz-plus{width:36px;height:36px}
+  .features{grid-template-columns:1fr;gap:8px}
+  .feature{padding:11px 12px}
+  .feature span{display:none}
+  .thumbs{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .thumb{border-radius:15px;padding:5px}
+  .thumb-media{border-radius:11px}
+  .thumb-meta{padding:6px 3px 2px}
+  .thumb-dims{display:none}
+  .thumb-nav{opacity:.9;width:24px;height:24px}
+  .options-card{padding:2px 14px}
+  .option-row{min-height:62px}
+  .option-text span{font-size:10.5px}
+  .home-footer{padding:10px 16px calc(12px + var(--safe-b))}
+  .footer-inner{padding:9px 9px 9px 14px;border-radius:19px}
+  .footer-copy strong{font-size:12px}
+  .footer-copy span{font-size:10px}
+  .home-footer .primary-btn{min-width:0;padding:12px 15px;font-size:12.5px}
+  .editor-meta{padding:10px 16px 6px}
+  .meta-detail{max-width:100%;white-space:normal;line-height:1.4}
+  .stage-wrap{padding:0 13px 2px}
+  .preview-stage{padding:14px;border-radius:20px}
+  .editor-bar{padding:5px 16px calc(11px + var(--safe-b))}
+  .bar-dims span{display:none}
+  .ghost-btn{padding:10px 12px;font-size:11.5px}
+  .primary-btn.compact{padding:11px 14px;font-size:12.5px}
+  .stage-hint{height:31px;font-size:10px;padding:0 8px}
+  .sheet{padding:18px 18px calc(17px + var(--safe-b));border-radius:26px 26px 0 0;width:100%;max-height:92dvh;animation:sheetUp .34s cubic-bezier(.16,.84,.24,1) both}
+  .modal{align-items:flex-end;padding:0}
+  .sheet-grab{display:block}
+  .toast-host{bottom:calc(85px + var(--safe-b))}
+}
+@media (max-width:560px){
+  .topbar-inner{padding:0 14px}
+  .brand-name{font-size:15px}
+  .local-badge{display:none}
+  .home-inner{padding:24px 14px 20px}
+  .hero{margin-bottom:21px}
+  .hero h1{font-size:clamp(33px,10.5vw,46px);letter-spacing:-.05em}
+  .eyebrow{font-size:9.5px;padding:6px 10px}
+  .hero-sub{font-size:12.5px;line-height:1.65}
+  .dropzone{padding:22px 17px;display:flex;flex-direction:column;text-align:center}
+  .dz-copy{display:flex;flex-direction:column;align-items:center}
+  .dz-meta{justify-content:center}
+  .dz-art{width:176px;height:136px;order:-1;margin-bottom:5px;transform:scale(.92);transform-origin:center}
+  .mini-shot{width:74px;height:102px}
+  .mini-shot.a{left:7px}.mini-shot.b{left:48px}.mini-shot.c{left:88px}
+  .dropzone .seam-spark{left:50%;top:55px;transform:translateX(-50%) rotate(-7deg)}
+  .dz-kicker{margin-bottom:7px}
+  .dropzone h2{font-size:21px;margin-bottom:6px}
+  .demo-btn{margin-top:14px}
+  .section-head{align-items:flex-start;flex-wrap:wrap;gap:8px}
+  .head-actions{margin-left:auto}
+  .thumb-nav{opacity:.88}
+  .thumb-name{font-size:10px}
+  .home-footer .footer-status{max-width:52%}
+  .footer-copy strong{font-size:11.5px}
+  .footer-copy span{display:none}
+  .home-footer .primary-btn{font-size:12px;padding:12px 13px;gap:6px}
+  .home-footer .primary-btn svg{width:14px;height:14px}
+  .option-row{gap:10px}
+  .option-icon{width:32px;height:32px;border-radius:10px}
+  .option-text strong{font-size:12px}
+  .editor-title{font-size:13.5px}
+  .editor-meta{align-items:flex-start}
+  .meta-line{gap:6px}
+  .status-pill{font-size:10px;padding:5px 8px}
+  .meta-detail{font-size:10px;width:100%;max-height:32px;overflow:hidden}
+  .restore-btn{font-size:11px;padding:7px 6px}
+  .bar-dims strong{font-size:11.5px}
+  .bar-actions{gap:6px}
+  .ghost-btn{font-size:11px;padding:9px 10px}
+  .primary-btn.compact{font-size:12px;padding:10px 12px}
+  .sequence{display:none}
+  .seam-grip{font-size:11px;padding:7px 11px;gap:5px}
+  .seam-grip svg{width:12px;height:12px}
+}
+@media (hover:none){
+  .thumb-nav{opacity:.88}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <button class="icon-btn back-btn" id="backBtn" hidden aria-label="返回选图">
+        <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="brand" id="brandHome">
+        <span class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="14" height="18" rx="3"/><path d="M3 7v12a2 2 0 0 0 2 2h12"/><path d="M10 8h6M10 12h6M10 16h3"/></svg>
+        </span>
+        <span class="brand-name">缝图</span>
+        <span class="brand-tag">长图拼接</span>
+      </div>
+      <div class="editor-title" id="editorTitle" hidden>拼接预览</div>
+      <div class="top-actions">
+        <span class="local-badge" id="localBadge"><span class="live-dot"></span>本地处理</span>
+        <button class="top-export" id="topExportBtn" hidden>导出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- HOME -->
+    <section class="screen home-screen" id="homeScreen">
+      <div class="home-scroll" id="homeScroll">
+        <div class="home-inner">
+          <section class="hero">
+            <div class="eyebrow"><span class="spark">✦</span> screenshot stitcher</div>
+            <h1>把零散截图，<br><span class="accent">拼成一张长图。</span></h1>
+            <p class="hero-sub">自动跳过状态栏与底部固定栏，精准识别滚动内容的重叠区域。接缝位置随手可调，长宽不同也能自动等比缩放。</p>
+          </section>
+
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="选择或拖入截图">
+            <div class="dz-art" aria-hidden="true">
+              <div class="shot-stack">
+                <div class="mini-shot a"><div class="ms-top"></div><div class="ms-hero"></div><div class="ms-line w70"></div><div class="ms-line w48"></div><div class="ms-grid"><i></i><i></i></div></div>
+                <div class="mini-shot b"><div class="ms-top"></div><div class="ms-hero"></div><div class="ms-line"></div><div class="ms-line w70"></div><div class="ms-line w48"></div></div>
+                <div class="mini-shot c"><div class="ms-top"></div><div class="ms-hero"></div><div class="ms-line w70"></div><div class="ms-line"></div><div class="ms-line w48"></div></div>
+              </div>
+              <span class="seam-spark"></span>
+              <span class="dz-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            </div>
+            <div class="dz-copy">
+              <div class="dz-kicker">点击选择 / 拖拽到这里</div>
+              <h2>把截图拖进来，开始拼接</h2>
+              <p>支持 JPG、PNG、WebP，一次可选择多张。<br>不同尺寸的图片会自动等比缩放到统一宽度。</p>
+              <div class="dz-meta">
+                <span class="dz-chip warm">自动去重</span>
+                <span class="dz-chip">跳过状态栏/底栏</span>
+                <span class="dz-chip">纯本地处理</span>
+              </div>
+              <button class="demo-btn" id="demoBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.2L19.5 10l-5.3 1.8L12 17l-2.2-5.2L4.5 10l5.3-1.8L12 3z"/><path d="M18.5 16.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8.8-1.9z"/></svg>
+                用示例图片试试
+              </button>
+            </div>
+          </div>
+
+          <div class="features" id="features">
+            <div class="feature">
+              <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/><circle cx="18" cy="12" r="2"/><circle cx="19" cy="17" r="2"/></svg></span>
+              <div><strong>跳过固定栏</strong><span>状态栏、导航栏和底部栏不参与拼接</span></div>
+            </div>
+            <div class="feature">
+              <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg></span>
+              <div><strong>接缝可拖动</strong><span>拖一拖，挑最自然的拼接位置</span></div>
+            </div>
+            <div class="feature">
+              <span class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+              <div><strong>高清长图导出</strong><span>PNG / JPEG，一键保存到本地</span></div>
+            </div>
+          </div>
+
+          <section class="selection-panel" id="selectionPanel" hidden>
+            <div class="section-head">
+              <div>
+                <h2>已选截图 <span class="count" id="imageCount">0</span></h2>
+                <p>拖动缩略图调整顺序 · 截图会按此顺序拼接</p>
+              </div>
+              <div class="head-actions">
+                <button class="text-btn" id="sortBtn" type="button">按名称排序</button>
+                <button class="text-btn accent" id="addMoreBtn" type="button">+ 添加</button>
+              </div>
+            </div>
+            <div class="thumbs" id="thumbGrid"></div>
+            <div class="options-card">
+              <div class="option-row">
+                <span class="option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M12 3v18"/></svg></span>
+                <div class="option-text"><strong>统一宽度</strong><span>不同尺寸的截图会等比缩放到同宽</span></div>
+                <div class="select-wrap">
+                  <select id="widthSelect" aria-label="输出宽度">
+                    <option value="auto">自动</option>
+                    <option value="1080">1080 px</option>
+                    <option value="1440">1440 px</option>
+                    <option value="2160">2160 px</option>
+                  </select>
+                </div>
+              </div>
+              <div class="option-row">
+                <span class="option-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.5 15.5M8.5 8.5L20 20"/></svg></span>
+                <div class="option-text"><strong>自动去重</strong><span>识别重叠区域，裁掉截图之间的重复内容</span></div>
+                <label class="switch" aria-label="自动去重">
+                  <input type="checkbox" id="dedupeToggle" checked>
+                  <span class="track"></span>
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="home-footer">
+        <div class="footer-inner">
+          <div class="footer-status">
+            <span class="footer-dot" id="footerDot"></span>
+            <div class="footer-copy">
+              <strong id="footerTitle">还没有选择截图</strong>
+              <span id="footerSub">支持一次选择多张 · 全程本地处理</span>
+            </div>
+          </div>
+          <button class="primary-btn" id="startBtn" type="button" disabled>
+            <span id="startLabel">开始拼接</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5l5 5-5 5"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- EDITOR -->
+    <section class="screen editor-screen" id="editorScreen" hidden>
+      <div class="editor-meta">
+        <div class="meta-line">
+          <span class="status-pill" id="metaPill"><span id="metaTitle">智能拼接完成</span></span>
+          <span class="meta-detail" id="metaDetail"></span>
+        </div>
+        <button class="text-btn restore-btn" id="restoreBtn" type="button" disabled>恢复自动</button>
+      </div>
+      <div class="stage-wrap">
+        <div class="preview-stage" id="previewStage">
+          <div class="long-preview" id="longPreview">
+            <canvas id="previewCanvas"></canvas>
+            <div id="seamLayer"></div>
+          </div>
+        </div>
+        <div class="stage-hint" id="stageHint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>
+          <span id="hintText">拖动黄色接缝线微调，点击接缝打开设置</span>
+        </div>
+      </div>
+      <div class="seam-settings" id="seamSettings" hidden>
+        <div class="ss-head">
+          <div>
+            <strong id="ssTitle">接缝 1</strong>
+            <span id="ssSub">手动调整重叠与接缝位置</span>
+          </div>
+          <button class="ss-close" id="ssClose" type="button" aria-label="关闭接缝设置">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>重叠高度</span><strong id="ssOverlapValue">0 px</strong></div>
+          <input type="range" id="ssOverlap" min="0" max="100" value="0" step="1" aria-label="重叠高度">
+          <p class="ss-hint">自动识别不准确时，可手动增加或减少重叠区域。</p>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>接缝位置</span><strong id="ssCutValue">0 px</strong></div>
+          <input type="range" id="ssCut" min="0" max="0" value="0" step="1" aria-label="接缝位置">
+          <p class="ss-hint">控制重叠区域里保留多少上一张截图的画面。</p>
+        </div>
+        <div class="ss-actions">
+          <button class="ghost-btn" id="ssAuto" type="button">恢复自动</button>
+          <button class="primary-btn" id="ssDone" type="button">完成</button>
+        </div>
+      </div>
+      <div class="editor-bar">
+        <div class="bar-dims">
+          <strong id="barDims">—</strong>
+          <span id="barSub">自动去重后的长图尺寸</span>
+        </div>
+        <div class="bar-actions">
+          <button class="ghost-btn" id="restoreBtnBottom" type="button" disabled>恢复自动</button>
+          <button class="primary-btn compact" id="saveBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>
+            保存长图
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple hidden>
+
+<!-- export sheet -->
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-backdrop" data-close-export></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <div>
+        <h3 id="exportTitle">保存长图</h3>
+        <p>生成后先预览，长按图片即可保存到相册</p>
+      </div>
+      <button class="sheet-close" id="closeExport" type="button" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="export-summary">
+      <span class="export-summary-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+      </span>
+      <div>
+        <strong id="exportDims">—</strong>
+        <span id="exportMeta">自动去重后的长图</span>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-head"><label>图片格式</label><span id="formatHint">适合文字截图，无损</span></div>
+      <div class="segmented" id="formatSeg">
+        <button type="button" data-format="png" class="active" aria-pressed="true">PNG</button>
+        <button type="button" data-format="jpeg" aria-pressed="false">JPEG</button>
+      </div>
+    </div>
+    <div class="field" id="qualityField" hidden>
+      <div class="field-head"><label for="qualityRange">JPEG 画质</label><span id="qualityValue">92%</span></div>
+      <input type="range" id="qualityRange" min="60" max="100" value="92" step="1">
+    </div>
+    <div class="export-note info" id="exportHint">长图会按当前接缝位置生成，接缝不会出现在成品上。</div>
+    <div class="export-note" id="exportNote" hidden></div>
+    <button class="primary-btn sheet-save" id="downloadBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>
+      <span id="downloadLabel">生成长图 · PNG</span>
+    </button>
+    <p class="sheet-foot">生成后不会自动下载文件，可长按预览图保存到相册</p>
+  </div>
+</div>
+
+<!-- export result viewer -->
+<div class="result-modal" id="resultModal" hidden>
+  <div class="result-shell" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+    <div class="result-head">
+      <div>
+        <h3 id="resultTitle">长图已生成</h3>
+        <p id="resultMeta">长按图片即可保存到相册</p>
+      </div>
+      <button class="result-close" id="closeResult" type="button" aria-label="关闭长图预览">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="result-viewport" id="resultViewport">
+      <img id="resultImage" alt="拼接生成的完整长图" draggable="false">
+    </div>
+    <div class="result-footer">
+      <div class="result-tip">
+        <span class="result-tip-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12V7.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 11V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11V7.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1.2a4 4 0 0 1-3.2-1.6L4 15.3a1.7 1.7 0 0 1 2.6-2.1L8 14.5V12"/></svg>
+        </span>
+        <div>
+          <strong id="resultTipTitle">长按图片保存到相册</strong>
+          <span id="resultTip">长按上方长图，选择「存储图像」或「保存图片」</span>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="result-download" id="resultDownload" type="button">下载到电脑</button>
+        <button class="result-done" id="resultDone" type="button">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- loading -->
+<div class="loading-overlay" id="loadingOverlay" hidden>
+  <div class="loading-card" role="status" aria-live="polite">
+    <div class="loader-stack" aria-hidden="true">
+      <div class="loader-card lc1"></div>
+      <div class="loader-card lc2"></div>
+      <div class="loader-card lc3"></div>
+      <span class="loader-scan"></span>
+    </div>
+    <div class="loading-title" id="loadingTitle">正在智能拼接</div>
+    <div class="loading-text" id="loadingText">正在分析截图之间的重叠区域…</div>
+    <div class="progress"><div class="progress-fill" id="loadingBar"></div></div>
+    <div class="loading-pct" id="loadingPct">0%</div>
+  </div>
+</div>
+
+<div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ==========================================================================
+     Constants & state
+     ========================================================================== */
+  const COMPARE_WIDTH = 480;
+  const MAX_IMAGES = 30;
+  const MAX_EXPORT_HEIGHT = 30000;
+  const MAX_EXPORT_AREA = 40000000;
+  const MAX_PREVIEW_PIXEL_HEIGHT = 16000;
+  const IMAGE_ERROR = '图片读取失败';
+
+  const els = {
+    brandHome: document.getElementById('brandHome'),
+    backBtn: document.getElementById('backBtn'),
+    editorTitle: document.getElementById('editorTitle'),
+    localBadge: document.getElementById('localBadge'),
+    topExportBtn: document.getElementById('topExportBtn'),
+
+    homeScreen: document.getElementById('homeScreen'),
+    homeScroll: document.getElementById('homeScroll'),
+    dropzone: document.getElementById('dropzone'),
+    demoBtn: document.getElementById('demoBtn'),
+    features: document.getElementById('features'),
+    selectionPanel: document.getElementById('selectionPanel'),
+    thumbGrid: document.getElementById('thumbGrid'),
+    imageCount: document.getElementById('imageCount'),
+    sortBtn: document.getElementById('sortBtn'),
+    addMoreBtn: document.getElementById('addMoreBtn'),
+    widthSelect: document.getElementById('widthSelect'),
+    dedupeToggle: document.getElementById('dedupeToggle'),
+    footerDot: document.getElementById('footerDot'),
+    footerTitle: document.getElementById('footerTitle'),
+    footerSub: document.getElementById('footerSub'),
+    startBtn: document.getElementById('startBtn'),
+    startLabel: document.getElementById('startLabel'),
+
+    editorScreen: document.getElementById('editorScreen'),
+    metaPill: document.getElementById('metaPill'),
+    metaTitle: document.getElementById('metaTitle'),
+    metaDetail: document.getElementById('metaDetail'),
+    restoreBtn: document.getElementById('restoreBtn'),
+    restoreBtnBottom: document.getElementById('restoreBtnBottom'),
+    previewStage: document.getElementById('previewStage'),
+    longPreview: document.getElementById('longPreview'),
+    previewCanvas: document.getElementById('previewCanvas'),
+    seamLayer: document.getElementById('seamLayer'),
+    hintText: document.getElementById('hintText'),
+    barDims: document.getElementById('barDims'),
+    barSub: document.getElementById('barSub'),
+    saveBtn: document.getElementById('saveBtn'),
+    seamSettings: document.getElementById('seamSettings'),
+    ssTitle: document.getElementById('ssTitle'),
+    ssSub: document.getElementById('ssSub'),
+    ssClose: document.getElementById('ssClose'),
+    ssOverlap: document.getElementById('ssOverlap'),
+    ssOverlapValue: document.getElementById('ssOverlapValue'),
+    ssCut: document.getElementById('ssCut'),
+    ssCutValue: document.getElementById('ssCutValue'),
+    ssAuto: document.getElementById('ssAuto'),
+    ssDone: document.getElementById('ssDone'),
+
+    fileInput: document.getElementById('fileInput'),
+    exportModal: document.getElementById('exportModal'),
+    closeExport: document.getElementById('closeExport'),
+    exportDims: document.getElementById('exportDims'),
+    exportMeta: document.getElementById('exportMeta'),
+    exportHint: document.getElementById('exportHint'),
+    exportNote: document.getElementById('exportNote'),
+    formatSeg: document.getElementById('formatSeg'),
+    formatHint: document.getElementById('formatHint'),
+    qualityField: document.getElementById('qualityField'),
+    qualityRange: document.getElementById('qualityRange'),
+    qualityValue: document.getElementById('qualityValue'),
+    downloadBtn: document.getElementById('downloadBtn'),
+    downloadLabel: document.getElementById('downloadLabel'),
+
+    resultModal: document.getElementById('resultModal'),
+    resultViewport: document.getElementById('resultViewport'),
+    resultImage: document.getElementById('resultImage'),
+    resultMeta: document.getElementById('resultMeta'),
+    resultTip: document.getElementById('resultTip'),
+    resultTipTitle: document.getElementById('resultTipTitle'),
+    closeResult: document.getElementById('closeResult'),
+    resultDone: document.getElementById('resultDone'),
+    resultDownload: document.getElementById('resultDownload'),
+
+    loadingOverlay: document.getElementById('loadingOverlay'),
+    loadingTitle: document.getElementById('loadingTitle'),
+    loadingText: document.getElementById('loadingText'),
+    loadingBar: document.getElementById('loadingBar'),
+    loadingPct: document.getElementById('loadingPct'),
+    toastHost: document.getElementById('toastHost')
+  };
+
+  const state = {
+    images: [],
+    seen: new Set(),
+    nextId: 0,
+    screen: 'home',
+    stitch: null,
+    busy: false,
+    adding: false,
+    dragId: null,
+    seamDrag: null,
+    exportFormat: 'png',
+    exportQuality: 0.92,
+    previewScale: 1,
+    previewCssWidth: 0,
+    paintRaf: 0,
+    fitRaf: 0,
+    demoBusy: false,
+    activeSeam: null,
+    suppressSeamClick: false,
+    seamGeometryRaf: 0,
+    resultUrl: null,
+    resultBlob: null,
+    resultFilename: '',
+    resultFormat: 'png'
+  };
+
+  /* ==========================================================================
+     Tiny utilities
+     ========================================================================== */
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  const formatNum = (value) => Number(value || 0).toLocaleString('zh-CN');
+  const escapeHTML = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+
+  function showToast(message, type = 'info') {
+    if (!message) return;
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    els.toastHost.appendChild(el);
+    while (els.toastHost.children.length > 3) {
+      els.toastHost.firstElementChild.remove();
+    }
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 320);
+    }, 2900);
+  }
+
+  function showLoading(title, text, pct = 0) {
+    els.loadingTitle.textContent = title || '正在处理';
+    els.loadingText.textContent = text || '';
+    setLoadingProgress(pct, text);
+    els.loadingOverlay.hidden = false;
+  }
+
+  function setLoadingProgress(pct, text) {
+    const value = clamp(Math.round(Number(pct) || 0), 0, 100);
+    els.loadingBar.style.width = `${value}%`;
+    els.loadingPct.textContent = `${value}%`;
+    if (typeof text === 'string' && text) els.loadingText.textContent = text;
+  }
+
+  function hideLoading() {
+    els.loadingOverlay.hidden = true;
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  }
+
+  function hasFiles(event) {
+    const dt = event.dataTransfer;
+    if (!dt) return false;
+    if (dt.types) {
+      for (let i = 0; i < dt.types.length; i += 1) {
+        if (dt.types[i] === 'Files') return true;
+      }
+    }
+    return false;
+  }
+
+  function median(values) {
+    if (!values.length) return 1080;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const mid = Math.floor((sorted.length - 1) / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid] + sorted[mid + 1]) / 2;
+  }
+
+  /* ==========================================================================
+     File decoding
+     ========================================================================== */
+  async function decodeImage(file) {
+    if (typeof window.createImageBitmap === 'function') {
+      try {
+        return await window.createImageBitmap(file, { imageOrientation: 'from-image' });
+      } catch (err) {
+        try {
+          return await window.createImageBitmap(file);
+        } catch (err2) {
+          /* fall through to <img> */
+        }
+      }
+    }
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (img.naturalWidth && img.naturalHeight) resolve(img);
+        else reject(new Error(IMAGE_ERROR));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error(IMAGE_ERROR));
+      };
+      img.decoding = 'async';
+      img.src = url;
+    });
+  }
+
+  function bitmapSize(bitmap) {
+    return {
+      width: bitmap.naturalWidth || bitmap.width || 0,
+      height: bitmap.naturalHeight || bitmap.height || 0
+    };
+  }
+
+  function makeThumbnail(bitmap) {
+    const size = bitmapSize(bitmap);
+    const width = 180;
+    if (!size.width || !size.height) return '';
+    const height = Math.max(1, Math.round((size.height * width) / size.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.fillStyle = '#f6f2ea';
+    ctx.fillRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', 0.76);
+  }
+
+  async function addFiles(fileList) {
+    if (state.adding || state.busy) return;
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+
+    const imageFiles = files.filter((file) => file && ((file.type && file.type.startsWith('image/')) || /\.(jpe?g|png|webp|gif|bmp|avif|hei[cf])$/i.test(file.name || '')));
+    const ignoredCount = files.length - imageFiles.length;
+
+    if (!imageFiles.length) {
+      showToast('请选择图片文件', 'error');
+      return;
+    }
+    if (state.images.length >= MAX_IMAGES) {
+      showToast(`最多支持 ${MAX_IMAGES} 张截图`, 'info');
+      return;
+    }
+
+    state.adding = true;
+    updateStartButton();
+    showLoading('正在读取截图', '正在解码图片…', 6);
+    await nextFrame();
+
+    let added = 0;
+    let failed = 0;
+    let duplicate = 0;
+    let limitHit = false;
+
+    try {
+      for (let i = 0; i < imageFiles.length; i += 1) {
+        if (state.images.length >= MAX_IMAGES) {
+          limitHit = true;
+          break;
+        }
+        const file = imageFiles[i];
+        const sig = `${file.name || 'image'}|${file.size || 0}|${file.lastModified || 0}`;
+        if (state.seen.has(sig)) {
+          duplicate += 1;
+          continue;
+        }
+        try {
+          const bitmap = await decodeImage(file);
+          const size = bitmap ? bitmapSize(bitmap) : { width: 0, height: 0 };
+          if (!size.width || !size.height) throw new Error(IMAGE_ERROR);
+          const thumbUrl = makeThumbnail(bitmap);
+          const id = state.nextId + 1;
+          state.nextId = id;
+          state.images.push({
+            id,
+            sig,
+            name: file.name || `截图-${id}`,
+            size: file.size || 0,
+            width: size.width,
+            height: size.height,
+            bitmap,
+            thumbUrl
+          });
+          state.seen.add(sig);
+          added += 1;
+        } catch (err) {
+          console.warn('Image decode failed:', file && file.name, err);
+          failed += 1;
+        }
+        setLoadingProgress(6 + (88 * (i + 1)) / imageFiles.length, `正在读取第 ${i + 1} / ${imageFiles.length} 张…`);
+        await sleep(0);
+      }
+
+      setLoadingProgress(98, '正在整理图片…');
+      await nextFrame();
+      hideLoading();
+      updateHomeUI();
+      updateStartButton();
+
+      const messages = [];
+      if (added) messages.push(`已添加 ${added} 张截图`);
+      if (duplicate) messages.push(`${duplicate} 张重复图片已跳过`);
+      if (failed) messages.push(`${failed} 张图片无法读取`);
+      if (ignoredCount) messages.push(`${ignoredCount} 个非图片文件已忽略`);
+      if (limitHit) messages.push(`最多支持 ${MAX_IMAGES} 张`);
+      if (messages.length) {
+        showToast(messages.join(' · '), added ? (failed ? 'info' : 'success') : (failed ? 'error' : 'info'));
+      }
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      showToast(`添加图片失败：${err && err.message ? err.message : '未知错误'}`, 'error');
+    } finally {
+      state.adding = false;
+      if (!els.loadingOverlay.hidden) hideLoading();
+      updateStartButton();
+    }
+  }
+
+  /* ==========================================================================
+     Home UI
+     ========================================================================== */
+  function computeAutoWidth() {
+    if (!state.images.length) return 1080;
+    return clamp(Math.round(median(state.images.map((img) => img.width))), 320, 2400);
+  }
+
+  function resolveOutputWidth() {
+    const value = els.widthSelect.value;
+    if (value === 'auto') return computeAutoWidth();
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? clamp(parsed, 320, 3200) : computeAutoWidth();
+  }
+
+  function updateAutoWidthLabel() {
+    const auto = computeAutoWidth();
+    const option = els.widthSelect.querySelector('option[value="auto"]');
+    if (option) option.textContent = `自动 · ${formatNum(auto)}px`;
+  }
+
+  function updateFooterSummary() {
+    if (!state.images.length) {
+      els.footerDot.classList.remove('ready');
+      els.footerTitle.textContent = '还没有选择截图';
+      els.footerSub.textContent = '支持一次选择多张 · 全程本地处理';
+      return;
+    }
+    els.footerDot.classList.add('ready');
+    els.footerTitle.textContent = `${state.images.length} 张截图已就绪`;
+    const width = resolveOutputWidth();
+    els.footerSub.textContent = `${formatNum(width)}px 宽 · ${els.dedupeToggle.checked ? '自动去重已开启' : '按顺序直接拼接'}`;
+  }
+
+  function updateStartButton() {
+    const disabled = !state.images.length || state.busy || state.adding;
+    els.startBtn.disabled = disabled;
+    if (state.adding) els.startLabel.textContent = '正在读取…';
+    else if (state.busy) els.startLabel.textContent = '处理中…';
+    else els.startLabel.textContent = '开始拼接';
+  }
+
+  function renderThumbGrid() {
+    if (!state.images.length) {
+      els.thumbGrid.innerHTML = '';
+      return;
+    }
+    const cards = state.images.map((img, index) => `
+      <div class="thumb" data-id="${img.id}" draggable="true">
+        <div class="thumb-media">
+          <img src="${img.thumbUrl}" alt="${escapeHTML(img.name)}" draggable="false">
+          <span class="thumb-num">${String(index + 1).padStart(2, '0')}</span>
+          <button class="thumb-del" type="button" data-remove="${img.id}" aria-label="移除第 ${index + 1} 张截图">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+          <button class="thumb-nav prev" type="button" data-move="${img.id}" data-dir="-1" aria-label="前移第 ${index + 1} 张截图" ${index === 0 ? 'disabled' : ''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="thumb-nav next" type="button" data-move="${img.id}" data-dir="1" aria-label="后移第 ${index + 1} 张截图" ${index === state.images.length - 1 ? 'disabled' : ''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+        <div class="thumb-meta">
+          <span class="thumb-name" title="${escapeHTML(img.name)}">${escapeHTML(img.name)}</span>
+          <span class="thumb-dims">${formatNum(img.width)}×${formatNum(img.height)}</span>
+        </div>
+      </div>
+    `).join('');
+
+    const addTile = `
+      <button class="add-tile" type="button" data-action="add" aria-label="继续添加截图">
+        <span class="plus-ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <span>继续添加</span>
+        <small>点击选择图片</small>
+      </button>
+    `;
+    els.thumbGrid.innerHTML = cards + addTile;
+  }
+
+  function updateHomeUI() {
+    const hasImages = state.images.length > 0;
+    els.homeScreen.classList.toggle('has-images', hasImages);
+    els.dropzone.hidden = hasImages;
+    els.features.hidden = hasImages;
+    els.selectionPanel.hidden = !hasImages;
+    els.imageCount.textContent = String(state.images.length);
+
+    if (hasImages) {
+      updateAutoWidthLabel();
+      renderThumbGrid();
+    } else {
+      els.thumbGrid.innerHTML = '';
+      updateAutoWidthLabel();
+    }
+    updateFooterSummary();
+    updateStartButton();
+  }
+
+  function removeImage(id) {
+    const index = state.images.findIndex((img) => img.id === id);
+    if (index < 0) return;
+    const [img] = state.images.splice(index, 1);
+    state.seen.delete(img.sig);
+    try {
+      if (img.bitmap && typeof img.bitmap.close === 'function') img.bitmap.close();
+    } catch (err) { /* ignore */ }
+    if (img.thumbUrl && img.thumbUrl.startsWith('blob:')) {
+      try { URL.revokeObjectURL(img.thumbUrl); } catch (err) { /* ignore */ }
+    }
+    updateHomeUI();
+    showToast('已移除这张截图', 'info');
+  }
+
+  function moveImage(id, direction) {
+    const index = state.images.findIndex((img) => img.id === id);
+    if (index < 0) return;
+    const next = clamp(index + direction, 0, state.images.length - 1);
+    if (next === index) return;
+    const [img] = state.images.splice(index, 1);
+    state.images.splice(next, 0, img);
+    renderThumbGrid();
+  }
+
+  function sortImagesByName() {
+    if (state.images.length < 2) return;
+    state.images.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
+    renderThumbGrid();
+    showToast('已按文件名排序', 'info');
+  }
+
+  function openFilePicker() {
+    if (state.busy || state.adding) return;
+    els.fileInput.value = '';
+    els.fileInput.click();
+  }
+
+  /* ==========================================================================
+     Overlap detection
+     ========================================================================== */
+  function buildGray(bitmap) {
+    const size = bitmapSize(bitmap);
+    const width = COMPARE_WIDTH;
+    const height = Math.max(1, Math.round((size.height * width) / size.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('浏览器无法创建画布');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    const data = ctx.getImageData(0, 0, width, height).data;
+    const gray = new Uint8Array(width * height);
+    for (let i = 0, j = 0; i < gray.length; i += 1, j += 4) {
+      gray[i] = (data[j] * 77 + data[j + 1] * 150 + data[j + 2] * 29) >> 8;
+    }
+    return { gray, width, height };
+  }
+
+  function medianNumber(values) {
+    if (!values.length) return 0;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  function maxPositive(values) {
+    const valid = values.filter((value) => value > 0);
+    if (!valid.length) return 0;
+    return Math.max(...valid);
+  }
+
+  function sampleRowDifference(A, B, yA, yB, cols) {
+    const rowA = yA * A.width;
+    const rowB = yB * B.width;
+    let sum = 0;
+    for (let c = 0; c < cols.length; c += 1) {
+      sum += Math.abs(A.gray[rowA + cols[c]] - B.gray[rowB + cols[c]]);
+    }
+    return sum / cols.length;
+  }
+
+  function findFixedEdge(diffs, threshold, minBand) {
+    let runStart = -1;
+    for (let y = 0; y < diffs.length; y += 1) {
+      if (diffs[y] > threshold) {
+        if (runStart < 0) runStart = y;
+        if (y - runStart + 1 >= 5) {
+          return runStart >= minBand ? runStart : 0;
+        }
+      } else {
+        runStart = -1;
+      }
+    }
+    return 0;
+  }
+
+  // 手机截图通常带有固定的状态栏/导航栏和底部 Tab 栏。先比较前后两张图
+  // 同一坐标的行：固定 UI 会几乎不变，而滚动内容会错位。据此找出上下
+  // 需要跳过的“死区”，再去搜索真正滚动内容的垂直重叠。
+  function detectFixedBands(A, B) {
+    const H = Math.min(A.height, B.height);
+    if (H < 80) return { top: 0, bottom: 0 };
+    const cols = [];
+    const colCount = 24;
+    for (let j = 0; j < colCount; j += 1) {
+      cols.push(clamp(Math.round(((j + 0.5) * A.width) / colCount), 1, A.width - 2));
+    }
+
+    const sampleDiffs = [];
+    for (let y = 0; y < H; y += 2) {
+      sampleDiffs.push(sampleRowDifference(A, B, y, y, cols));
+    }
+    const threshold = clamp(medianNumber(sampleDiffs) * 0.38, 7, 20);
+
+    const maxTop = Math.min(H - 2, Math.max(8, Math.round(H * 0.3)));
+    const topDiffs = [];
+    for (let y = 0; y < maxTop; y += 1) {
+      topDiffs.push(sampleRowDifference(A, B, y, y, cols));
+    }
+    const top = findFixedEdge(topDiffs, threshold, 8);
+
+    const maxBottom = Math.min(H - 2, Math.max(8, Math.round(H * 0.24)));
+    const bottomDiffs = [];
+    for (let k = 0; k < maxBottom; k += 1) {
+      bottomDiffs.push(sampleRowDifference(A, B, A.height - 1 - k, B.height - 1 - k, cols));
+    }
+    const bottom = findFixedEdge(bottomDiffs, threshold, 8);
+
+    if (top + bottom > H * 0.65) return { top: 0, bottom: 0 };
+    return { top, bottom };
+  }
+
+  function deriveImageInsets(pairBands, count, heights) {
+    const tops = new Array(count).fill(0);
+    const bottoms = new Array(count).fill(0);
+    const globalTop = medianNumber(pairBands.map((band) => band.top).filter((value) => value >= 8));
+    const globalBottom = medianNumber(pairBands.map((band) => band.bottom).filter((value) => value >= 8));
+    for (let i = 0; i < count; i += 1) {
+      const topCandidates = [];
+      const bottomCandidates = [];
+      if (i > 0 && pairBands[i - 1]) {
+        topCandidates.push(pairBands[i - 1].top);
+        bottomCandidates.push(pairBands[i - 1].bottom);
+      }
+      if (i < pairBands.length && pairBands[i]) {
+        topCandidates.push(pairBands[i].top);
+        bottomCandidates.push(pairBands[i].bottom);
+      }
+      const H = heights[i];
+      let top = clamp(maxPositive(topCandidates) || globalTop, 0, Math.floor(H * 0.32));
+      let bottom = clamp(maxPositive(bottomCandidates) || globalBottom, 0, Math.floor(H * 0.24));
+      if (top + bottom > H * 0.65) {
+        top = 0;
+        bottom = 0;
+      }
+      tops[i] = top;
+      bottoms[i] = bottom;
+    }
+    return { top: tops, bottom: bottoms };
+  }
+
+  function chooseAutoCut(A, B, overlapHeight, aBottom = 0, bTop = 0) {
+    const W = A.width;
+    const hA = A.height;
+    const cols = [];
+    const colCount = 18;
+    for (let j = 0; j < colCount; j += 1) {
+      cols.push(clamp(Math.round(((j + 0.5) * W) / colCount), 1, W - 2));
+    }
+    const start = Math.max(1, Math.floor(overlapHeight * 0.28));
+    const end = Math.min(overlapHeight - 1, Math.ceil(overlapHeight * 0.72));
+    let bestK = Math.round(overlapHeight / 2);
+    let bestValue = Infinity;
+    for (let k = start; k <= end; k += 1) {
+      const yA = hA - aBottom - overlapHeight + k;
+      const yB = bTop + k;
+      if (yA < 0 || yA >= A.height || yB < 0 || yB >= B.height) continue;
+      const rowA = yA * W;
+      const rowB = yB * W;
+      let diff = 0;
+      for (let c = 0; c < cols.length; c += 1) {
+        diff += Math.abs(A.gray[rowA + cols[c]] - B.gray[rowB + cols[c]]);
+      }
+      diff /= cols.length;
+      const centerPenalty = (Math.abs(k - overlapHeight / 2) / Math.max(1, overlapHeight / 2)) * 0.55;
+      const value = diff + centerPenalty;
+      if (value < bestValue) {
+        bestValue = value;
+        bestK = k;
+      }
+    }
+    return bestK;
+  }
+
+  function detectOverlap(A, B, aTop = 0, aBottom = 0, bTop = 0, bBottom = 0) {
+    const W = A.width;
+    const hA = A.height;
+    const hB = B.height;
+    const contentA = Math.max(0, hA - aTop - aBottom);
+    const contentB = Math.max(0, hB - bTop - bBottom);
+    const minHeight = Math.max(16, Math.round(Math.min(contentA, contentB) * 0.025));
+    const maxHeight = Math.min(contentA, contentB);
+    if (maxHeight <= minHeight) return null;
+
+    const cols = [];
+    const colCount = 26;
+    for (let j = 0; j < colCount; j += 1) {
+      cols.push(clamp(Math.round(((j + 0.5) * W) / colCount), 1, W - 2));
+    }
+
+    const evaluate = (overlapHeight) => {
+      if (overlapHeight < 4 || overlapHeight > maxHeight) return null;
+      const rowCount = Math.min(56, Math.max(8, overlapHeight));
+      let n = 0;
+      let sumA = 0;
+      let sumB = 0;
+      let sumAA = 0;
+      let sumBB = 0;
+      let sumAB = 0;
+      let sumAbs = 0;
+      for (let s = 0; s < rowCount; s += 1) {
+        const offset = Math.min(overlapHeight - 1, Math.floor(((s + 0.5) * overlapHeight) / rowCount));
+        const yA = hA - aBottom - overlapHeight + offset;
+        const yB = bTop + offset;
+        if (yA < aTop || yA >= hA - aBottom || yB < bTop || yB >= hB - bBottom) continue;
+        const rowA = yA * W;
+        const rowB = yB * W;
+        for (let c = 0; c < cols.length; c += 1) {
+          const x = cols[c];
+          const a = A.gray[rowA + x];
+          const b = B.gray[rowB + x];
+          sumA += a;
+          sumB += b;
+          sumAA += a * a;
+          sumBB += b * b;
+          sumAB += a * b;
+          sumAbs += Math.abs(a - b);
+          n += 1;
+        }
+      }
+      if (n < 40) return null;
+      const meanA = sumA / n;
+      const meanB = sumB / n;
+      const varA = sumAA / n - meanA * meanA;
+      const varB = sumBB / n - meanB * meanB;
+      const cov = sumAB / n - meanA * meanB;
+      const mae = sumAbs / n;
+      let r = 0;
+      if (varA > 0.35 && varB > 0.35) {
+        r = cov / Math.sqrt(varA * varB);
+        r = clamp(r, -1, 1);
+      }
+      let score = (1 - r) + (mae / 255) * 0.5;
+      if (varA < 1 || varB < 1) score += 0.18;
+      return { h: overlapHeight, r, mae, score, varA, varB };
+    };
+
+    const range = maxHeight - minHeight;
+    const coarseStep = Math.max(2, Math.round(range / 420));
+    const coarse = [];
+    for (let h = minHeight; h <= maxHeight; h += coarseStep) {
+      const result = evaluate(h);
+      if (result) coarse.push(result);
+    }
+    const lastResult = evaluate(maxHeight);
+    if (lastResult && (!coarse.length || coarse[coarse.length - 1].h !== maxHeight)) coarse.push(lastResult);
+    if (!coarse.length) return null;
+    coarse.sort((a, b) => a.score - b.score);
+
+    const seeds = [];
+    for (let i = 0; i < coarse.length; i += 1) {
+      const candidate = coarse[i];
+      if (seeds.every((seed) => Math.abs(seed.h - candidate.h) > coarseStep * 2)) {
+        seeds.push(candidate);
+        if (seeds.length >= 4) break;
+      }
+    }
+
+    let best = null;
+    seeds.forEach((seed) => {
+      const radius = Math.max(4, coarseStep * 2);
+      const from = Math.max(minHeight, seed.h - radius);
+      const to = Math.min(maxHeight, seed.h + radius);
+      for (let h = from; h <= to; h += 1) {
+        const result = evaluate(h);
+        if (result && (!best || result.score < best.score)) best = result;
+      }
+    });
+
+    if (!best) return null;
+
+    let accepted = false;
+    let low = false;
+    if (best.r >= 0.9 && best.mae <= 24) {
+      accepted = true;
+    } else if (best.r >= 0.78 && best.mae <= 36) {
+      accepted = true;
+      low = true;
+    }
+    if (!accepted) {
+      return { overlapComp: 0, cutComp: 0, r: best.r, mae: best.mae, low: false };
+    }
+
+    return {
+      overlapComp: best.h,
+      cutComp: chooseAutoCut(A, B, best.h, aBottom, bTop),
+      r: best.r,
+      mae: best.mae,
+      low
+    };
+  }
+
+  /* ==========================================================================
+     Stitch pipeline
+     ========================================================================== */
+  async function startStitch() {
+    if (state.busy || state.adding || !state.images.length) return;
+    state.busy = true;
+    updateStartButton();
+    showLoading('正在智能拼接', '正在统一图片尺寸…', 3);
+    await nextFrame();
+
+    try {
+      const width = resolveOutputWidth();
+      const heights = state.images.map((img) => Math.max(1, Math.round((img.height * width) / img.width)));
+      const sourceTotal = heights.reduce((sum, h) => sum + h, 0);
+      const imageCount = state.images.length;
+      const seams = [];
+      for (let i = 0; i < imageCount - 1; i += 1) {
+        seams.push({ overlap: 0, cut: 0, autoCut: 0, autoOverlap: 0, low: false, confidence: 0, detected: false });
+      }
+
+      let compInsets = {
+        top: new Array(imageCount).fill(0),
+        bottom: new Array(imageCount).fill(0)
+      };
+      let topInsets = new Array(imageCount).fill(0);
+      let bottomInsets = new Array(imageCount).fill(0);
+
+      if (imageCount > 1 && els.dedupeToggle.checked) {
+        setLoadingProgress(8, '正在缩放图片，分析重叠区域…');
+        await nextFrame();
+        const grays = [];
+        for (let i = 0; i < imageCount; i += 1) {
+          grays.push(buildGray(state.images[i].bitmap));
+          setLoadingProgress(8 + (24 * (i + 1)) / imageCount, `正在准备第 ${i + 1} / ${imageCount} 张截图…`);
+          await sleep(0);
+        }
+
+        // 第一步：根据相邻截图在“相同像素位置”的相似度，识别固定的状态栏、
+        // 导航栏、底部 Tab 栏和 Home 指示条，避免把这些固定 UI 当成滚动内容。
+        setLoadingProgress(31, '正在识别顶部状态栏与底部固定栏…');
+        const pairBands = [];
+        for (let i = 0; i < seams.length; i += 1) {
+          pairBands.push(detectFixedBands(grays[i], grays[i + 1]));
+          setLoadingProgress(31 + (13 * (i + 1)) / seams.length, `正在跳过第 ${i + 1} / ${seams.length} 组固定栏…`);
+          await sleep(0);
+        }
+
+        compInsets = deriveImageInsets(pairBands, imageCount, grays.map((item) => item.height));
+        for (let i = 0; i < imageCount; i += 1) {
+          const scale = heights[i] / Math.max(1, grays[i].height);
+          topInsets[i] = clamp(Math.round(compInsets.top[i] * scale), 0, heights[i]);
+          bottomInsets[i] = clamp(Math.round(compInsets.bottom[i] * scale), 0, heights[i]);
+          if (topInsets[i] + bottomInsets[i] > heights[i] * 0.8) {
+            topInsets[i] = 0;
+            bottomInsets[i] = 0;
+          }
+        }
+
+        // 第二步：只在两张图各自的滚动内容区域里找重叠，固定栏完全不参与匹配。
+        for (let i = 0; i < seams.length; i += 1) {
+          const match = detectOverlap(
+            grays[i],
+            grays[i + 1],
+            compInsets.top[i],
+            compInsets.bottom[i],
+            compInsets.top[i + 1],
+            compInsets.bottom[i + 1]
+          );
+          const contentOutA = Math.max(0, heights[i] - topInsets[i] - bottomInsets[i]);
+          const contentOutB = Math.max(0, heights[i + 1] - topInsets[i + 1] - bottomInsets[i + 1]);
+          const maxOverlap = Math.max(0, Math.min(contentOutA, contentOutB));
+          if (match && match.overlapComp > 0 && maxOverlap > 0) {
+            const scale = heights[i] / Math.max(1, grays[i].height);
+            const overlap = clamp(Math.round(match.overlapComp * scale), 0, maxOverlap);
+            const cut = clamp(Math.round((match.cutComp || 0) * scale), 0, overlap);
+            seams[i].overlap = overlap;
+            seams[i].cut = cut;
+            seams[i].autoCut = cut;
+            seams[i].autoOverlap = overlap;
+            seams[i].low = Boolean(match.low);
+            seams[i].confidence = match.r;
+            seams[i].detected = overlap > 0;
+          } else {
+            seams[i].low = false;
+            seams[i].confidence = match ? match.r : 0;
+          }
+          setLoadingProgress(45 + (46 * (i + 1)) / seams.length, `正在识别第 ${i + 1} / ${seams.length} 处接缝…`);
+          await sleep(0);
+        }
+      } else if (imageCount > 1) {
+        setLoadingProgress(72, '已关闭自动去重，正在按顺序拼接…');
+        await sleep(100);
+      }
+
+      state.stitch = {
+        width,
+        heights,
+        sourceTotal,
+        seams,
+        insets: { top: topInsets, bottom: bottomInsets },
+        dedupe: els.dedupeToggle.checked,
+        segments: [],
+        totalHeight: sourceTotal
+      };
+      computeSegments();
+      setLoadingProgress(95, '正在生成长图预览…');
+      await nextFrame();
+      hideLoading();
+      showEditor();
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      showToast(`拼接失败：${err && err.message ? err.message : '未知错误'}`, 'error');
+    } finally {
+      state.busy = false;
+      updateStartButton();
+    }
+  }
+
+  function computeSegments() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const count = stitch.heights.length;
+    const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : null;
+    const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : null;
+    let y = 0;
+    const segments = [];
+    for (let i = 0; i < count; i += 1) {
+      const H = stitch.heights[i];
+      const topInset = topInsets ? topInsets[i] || 0 : 0;
+      const bottomInset = bottomInsets ? bottomInsets[i] || 0 : 0;
+      const start = i === 0 ? 0 : topInset + stitch.seams[i - 1].cut;
+      const end = i === count - 1 ? H : H - bottomInset - stitch.seams[i].overlap + stitch.seams[i].cut;
+      const safeStart = clamp(start, 0, H);
+      const safeEnd = clamp(end, 0, H);
+      segments.push({
+        i,
+        start: safeStart,
+        end: Math.max(safeStart, safeEnd),
+        y,
+        height: Math.max(0, safeEnd - safeStart)
+      });
+      y += Math.max(0, safeEnd - safeStart);
+    }
+    stitch.segments = segments;
+    stitch.totalHeight = Math.max(1, Math.ceil(y - 0.0001));
+  }
+
+  /* ==========================================================================
+     Editor preview
+     ========================================================================== */
+  function showEditor() {
+    state.screen = 'editor';
+    closeSeamSettings();
+    els.homeScreen.hidden = true;
+    els.editorScreen.hidden = false;
+    els.brandHome.hidden = true;
+    els.backBtn.hidden = false;
+    els.editorTitle.hidden = false;
+    els.localBadge.hidden = true;
+    els.topExportBtn.hidden = false;
+    els.saveBtn.disabled = false;
+    document.title = '拼接预览 · 缝图';
+
+    buildSeamHandles();
+    updateEditorMeta();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (state.screen !== 'editor') return;
+        fitPreview();
+        els.previewStage.scrollTop = 0;
+      });
+    });
+  }
+
+  function showHome() {
+    if (state.busy) return;
+    closeSeamSettings();
+    closeExportModal();
+    closeResultViewer();
+    state.screen = 'home';
+    els.homeScreen.hidden = false;
+    els.editorScreen.hidden = true;
+    els.brandHome.hidden = false;
+    els.backBtn.hidden = true;
+    els.editorTitle.hidden = true;
+    els.localBadge.hidden = false;
+    els.topExportBtn.hidden = true;
+    document.title = '缝图 · 长图拼接';
+    updateHomeUI();
+  }
+
+  function fitPreview() {
+    const stitch = state.stitch;
+    if (!stitch || state.screen !== 'editor') return;
+    const stage = els.previewStage;
+    const stageStyle = getComputedStyle(stage);
+    const padLeft = parseFloat(stageStyle.paddingLeft) || 0;
+    const padRight = parseFloat(stageStyle.paddingRight) || 0;
+    const available = Math.max(120, stage.clientWidth - padLeft - padRight);
+
+    let cssWidth = Math.min(available, 680);
+    cssWidth = Math.min(cssWidth, Math.max(stitch.width, 360));
+    cssWidth = Math.max(1, Math.round(cssWidth));
+    const cssHeight = Math.max(1, Math.round((stitch.totalHeight * cssWidth) / stitch.width));
+
+    let dpr = Math.min(2, window.devicePixelRatio || 1);
+    let physWidth = Math.max(1, Math.round(cssWidth * dpr));
+    let physHeight = Math.max(1, Math.round(stitch.totalHeight * (physWidth / stitch.width)));
+    if (physHeight > MAX_PREVIEW_PIXEL_HEIGHT) {
+      const factor = MAX_PREVIEW_PIXEL_HEIGHT / physHeight;
+      physWidth = Math.max(1, Math.round(physWidth * factor));
+      physHeight = MAX_PREVIEW_PIXEL_HEIGHT;
+    }
+
+    const canvas = els.previewCanvas;
+    canvas.width = physWidth;
+    canvas.height = physHeight;
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    els.longPreview.style.width = `${cssWidth}px`;
+    els.longPreview.style.height = `${cssHeight}px`;
+
+    state.previewScale = cssWidth / stitch.width;
+    state.previewCssWidth = cssWidth;
+
+    drawComposite(canvas, physWidth, physHeight, physWidth / stitch.width);
+    layoutSeams();
+  }
+
+  function paintPreview() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const canvas = els.previewCanvas;
+    if (!canvas.width || !canvas.height) return;
+    drawComposite(canvas, canvas.width, canvas.height, canvas.width / stitch.width);
+    layoutSeams();
+  }
+
+  function drawComposite(canvas, outWidth, outHeight, scale) {
+    const stitch = state.stitch;
+    if (!stitch || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, outWidth, outHeight);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, outWidth, outHeight);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    for (let i = 0; i < stitch.segments.length; i += 1) {
+      const segment = stitch.segments[i];
+      if (segment.height <= 0.001) continue;
+      const image = state.images[segment.i];
+      if (!image || !image.bitmap) continue;
+      const sourceHeight = image.height;
+      const scaledHeight = stitch.heights[segment.i];
+      const sy = (segment.start / scaledHeight) * sourceHeight;
+      const sh = ((segment.end - segment.start) / scaledHeight) * sourceHeight;
+      const dy0 = Math.round(segment.y * scale);
+      const dy1 = Math.min(outHeight, Math.round((segment.y + segment.height) * scale));
+      if (dy1 <= dy0 || sh <= 0.0001) continue;
+      ctx.drawImage(image.bitmap, 0, sy, image.width, sh, 0, dy0, outWidth, dy1 - dy0);
+    }
+  }
+
+  function buildSeamHandles() {
+    els.seamLayer.innerHTML = '';
+    const stitch = state.stitch;
+    if (!stitch || !stitch.seams.length) return;
+    const upDownIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8h8M8 16h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>';
+    stitch.seams.forEach((seam, index) => {
+      const handle = document.createElement('div');
+      handle.className = 'seam';
+      handle.dataset.index = String(index);
+      handle.innerHTML = `
+        <div class="seam-band"></div>
+        <div class="seam-line"></div>
+        <button type="button" class="seam-grip" data-index="${index}">
+          ${upDownIcon}<span>接缝 ${index + 1}</span>
+        </button>
+      `;
+      els.seamLayer.appendChild(handle);
+    });
+  }
+
+  function layoutSeams() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const cssScale = state.previewScale || 1;
+    const handles = els.seamLayer.children;
+    let y = 0;
+    for (let i = 0; i < stitch.segments.length; i += 1) {
+      const segment = stitch.segments[i];
+      y = segment.y + segment.height;
+      if (i >= stitch.seams.length) break;
+      const handle = handles[i];
+      if (!handle) continue;
+      const seam = stitch.seams[i];
+      const lineY = y * cssScale;
+      handle.style.top = `${lineY - 32}px`;
+
+      const band = handle.querySelector('.seam-band');
+      if (band) {
+        if (seam.overlap > 0) {
+          band.style.display = 'block';
+          band.style.top = `${32 - seam.cut * cssScale}px`;
+          band.style.height = `${Math.max(0, seam.overlap * cssScale)}px`;
+        } else {
+          band.style.display = 'none';
+        }
+      }
+
+      const grip = handle.querySelector('.seam-grip');
+      if (grip) {
+        const label = grip.querySelector('span');
+        if (label) label.textContent = `${seam.overlap > 0 ? '接缝' : '设置接缝'} ${i + 1}`;
+        grip.setAttribute('aria-label', seam.overlap > 0
+          ? `接缝 ${i + 1}，重叠 ${formatNum(seam.overlap)} 像素；拖动微调，点击打开接缝设置`
+          : `接缝 ${i + 1}，暂无重叠；点击打开接缝设置以手动添加重叠`);
+        grip.title = seam.overlap > 0 ? '拖动微调；点击打开接缝设置' : '点击手动设置重叠区域';
+      }
+      handle.classList.toggle('low', Boolean(seam.low) && seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap);
+      handle.classList.toggle('no-overlap', seam.overlap <= 0);
+    }
+  }
+
+  function updateEditorMeta() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const seams = stitch.seams;
+    const imageCount = stitch.heights.length;
+    const overlapSum = seams.reduce((sum, seam) => sum + seam.overlap, 0);
+    const manualCount = seams.filter((seam) => seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap).length;
+    const lowCount = seams.filter((seam) => seam.low && seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap).length;
+    const dedupeOn = stitch.dedupe !== false;
+    const percent = stitch.sourceTotal ? Math.round((overlapSum / stitch.sourceTotal) * 100) : 0;
+    const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
+    const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
+    let fixedRemoved = 0;
+    for (let i = 1; i < imageCount; i += 1) fixedRemoved += topInsets[i] || 0;
+    for (let i = 0; i < imageCount - 1; i += 1) fixedRemoved += bottomInsets[i] || 0;
+
+    const parts = [`${imageCount} 张截图`];
+    if (overlapSum > 0) parts.push(`去除重叠 ${formatNum(overlapSum)} px${percent ? `（${percent}%）` : ''}`);
+    else if (imageCount > 1) parts.push(dedupeOn ? '未检测到重叠' : '自动去重已关闭');
+    if (fixedRemoved > 0) parts.push(`跳过固定栏 ${formatNum(fixedRemoved)} px`);
+    if (seams.length) parts.push(`${seams.length} 处接缝`);
+    if (manualCount) parts.push(`已手动调整 ${manualCount} 处`);
+    if (lowCount) parts.push(`${lowCount} 处建议复核`);
+
+    let title = '智能拼接完成';
+    let pillClass = 'status-pill';
+    if (lowCount) {
+      title = '拼接完成，请复核接缝';
+      pillClass = 'status-pill warn';
+    } else if (manualCount) {
+      title = '接缝已手动调整';
+    } else if (!dedupeOn) {
+      title = '自动去重已关闭';
+      pillClass = 'status-pill neutral';
+    } else if (imageCount > 1 && overlapSum === 0) {
+      title = fixedRemoved > 0 ? '已跳过固定栏拼接' : '已按顺序直接拼接';
+      pillClass = 'status-pill neutral';
+    } else if (imageCount === 1) {
+      title = '单张图片预览';
+      pillClass = 'status-pill neutral';
+    }
+
+    els.metaPill.className = pillClass;
+    els.metaTitle.textContent = title;
+    els.metaDetail.textContent = parts.join(' · ');
+    els.barDims.textContent = `${formatNum(stitch.width)} × ${formatNum(stitch.totalHeight)} px`;
+    if (overlapSum > 0) {
+      els.barSub.textContent = `${formatNum(overlapSum)} px 重复内容已去除${fixedRemoved > 0 ? ` · 固定栏跳过 ${formatNum(fixedRemoved)} px` : ''}`;
+    } else if (fixedRemoved > 0) {
+      els.barSub.textContent = `已跳过顶部/底部固定栏 ${formatNum(fixedRemoved)} px`;
+    } else {
+      els.barSub.textContent = dedupeOn ? `${imageCount} 张截图 · 自动去重未发现重叠` : `${imageCount} 张截图 · 按顺序直接拼接`;
+    }
+    els.restoreBtn.disabled = manualCount === 0;
+    els.restoreBtnBottom.disabled = manualCount === 0;
+
+    if (!seams.length) {
+      els.hintText.textContent = '单张图片预览 · 无需调整接缝';
+    } else if (manualCount) {
+      els.hintText.textContent = '已手动调整 · 点击接缝可继续打开设置';
+    } else {
+      els.hintText.textContent = '拖动黄色接缝线微调，点击接缝打开设置';
+    }
+  }
+
+  function restoreAutoSeams() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    let changed = false;
+    stitch.seams.forEach((seam) => {
+      if (seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap) {
+        seam.cut = seam.autoCut;
+        seam.overlap = seam.autoOverlap;
+        changed = true;
+      }
+    });
+    if (!changed) {
+      showToast('接缝已经是自动位置', 'info');
+      return;
+    }
+    computeSegments();
+    fitPreview();
+    updateEditorMeta();
+    refreshSeamSettings();
+    showToast('已恢复自动接缝', 'success');
+  }
+
+  function getSeamMaxOverlap(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return 0;
+    const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
+    const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
+    const heightA = (stitch.heights[index] || 0) - (topInsets[index] || 0) - (bottomInsets[index] || 0);
+    const heightB = (stitch.heights[index + 1] || 0) - (topInsets[index + 1] || 0) - (bottomInsets[index + 1] || 0);
+    return Math.max(0, Math.min(heightA, heightB));
+  }
+
+  function setSeamActiveClasses(index) {
+    const handles = els.seamLayer.children;
+    for (let i = 0; i < handles.length; i += 1) {
+      handles[i].classList.toggle('active', i === index);
+    }
+  }
+
+  function refreshSeamSettings() {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    const seam = stitch.seams[index];
+    const maxOverlap = getSeamMaxOverlap(index);
+    const manual = seam.cut !== seam.autoCut || seam.overlap !== seam.autoOverlap;
+    const autoLabel = seam.autoOverlap > 0 ? `自动识别重叠 ${formatNum(seam.autoOverlap)} px` : '自动未识别到重叠';
+    els.ssTitle.textContent = `接缝 ${index + 1}`;
+    els.ssSub.textContent = `第 ${index + 1} 与第 ${index + 2} 张截图之间 · ${autoLabel}${manual ? ' · 已手动调整' : ''}`;
+    els.ssOverlap.max = String(Math.max(1, maxOverlap));
+    els.ssOverlap.value = String(seam.overlap);
+    els.ssOverlap.disabled = maxOverlap <= 0;
+    els.ssOverlapValue.textContent = `${formatNum(seam.overlap)} px`;
+    els.ssCut.max = String(Math.max(0, seam.overlap));
+    els.ssCut.value = String(seam.cut);
+    els.ssCut.disabled = seam.overlap <= 0;
+    els.ssCutValue.textContent = `${formatNum(seam.cut)} px`;
+    els.ssAuto.disabled = !manual;
+  }
+
+  function openSeamSettings(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return;
+    state.activeSeam = index;
+    setSeamActiveClasses(index);
+    refreshSeamSettings();
+    els.seamSettings.hidden = false;
+    requestAnimationFrame(() => {
+      if (state.activeSeam !== index) return;
+      const handle = els.seamLayer.children[index];
+      if (!handle) return;
+      const stageRect = els.previewStage.getBoundingClientRect();
+      const handleRect = handle.getBoundingClientRect();
+      const panelRect = els.seamSettings.getBoundingClientRect();
+      const safeTop = stageRect.top + 74;
+      const safeBottom = Math.min(stageRect.bottom, panelRect.top) - 30;
+      if (handleRect.top < safeTop || handleRect.bottom > safeBottom) {
+        els.previewStage.scrollTop += handleRect.top - stageRect.top - Math.max(90, els.previewStage.clientHeight * 0.28);
+      }
+    });
+  }
+
+  function closeSeamSettings() {
+    if (!els.seamSettings) return;
+    els.seamSettings.hidden = true;
+    state.activeSeam = null;
+    setSeamActiveClasses(null);
+  }
+
+  function scheduleSeamGeometry() {
+    if (state.seamGeometryRaf) return;
+    state.seamGeometryRaf = requestAnimationFrame(() => {
+      state.seamGeometryRaf = 0;
+      if (!state.stitch || state.screen !== 'editor') return;
+      const index = state.activeSeam;
+      let anchorOffset = null;
+      if (index != null) {
+        const handle = els.seamLayer.children[index];
+        if (handle) {
+          anchorOffset = handle.getBoundingClientRect().top - els.previewStage.getBoundingClientRect().top;
+        }
+      }
+      computeSegments();
+      fitPreview();
+      updateEditorMeta();
+      refreshSeamSettings();
+      if (anchorOffset != null && index != null) {
+        const handle = els.seamLayer.children[index];
+        if (handle) {
+          const nextOffset = handle.getBoundingClientRect().top - els.previewStage.getBoundingClientRect().top;
+          els.previewStage.scrollTop += nextOffset - anchorOffset;
+        }
+      }
+    });
+  }
+
+  function applySeamOverlap(value) {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    const seam = stitch.seams[index];
+    const maxOverlap = getSeamMaxOverlap(index);
+    const previous = seam.overlap;
+    const next = clamp(Math.round(Number(value) || 0), 0, maxOverlap);
+    if (next === seam.overlap) {
+      refreshSeamSettings();
+      return;
+    }
+    seam.overlap = next;
+    if (previous === 0 && next > 0) seam.cut = Math.round(next / 2);
+    seam.cut = clamp(seam.cut, 0, next);
+    refreshSeamSettings();
+    scheduleSeamGeometry();
+  }
+
+  function applySeamCut(value) {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    const seam = stitch.seams[index];
+    seam.cut = clamp(Math.round(Number(value) || 0), 0, seam.overlap);
+    computeSegments();
+    schedulePaint();
+    updateEditorMeta();
+    refreshSeamSettings();
+  }
+
+  function restoreActiveSeam() {
+    const stitch = state.stitch;
+    const index = state.activeSeam;
+    if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
+    const seam = stitch.seams[index];
+    if (seam.cut === seam.autoCut && seam.overlap === seam.autoOverlap) {
+      showToast('这处接缝已经是自动位置', 'info');
+      return;
+    }
+    seam.overlap = seam.autoOverlap;
+    seam.cut = seam.autoCut;
+    scheduleSeamGeometry();
+    refreshSeamSettings();
+    showToast(`接缝 ${index + 1} 已恢复自动`, 'success');
+  }
+
+  function onSeamClick(event) {
+    const handle = event.target.closest('.seam');
+    if (!handle) return;
+    if (state.suppressSeamClick) {
+      state.suppressSeamClick = false;
+      return;
+    }
+    openSeamSettings(Number(handle.dataset.index));
+  }
+
+  function schedulePaint() {
+    if (state.paintRaf) return;
+    state.paintRaf = requestAnimationFrame(() => {
+      state.paintRaf = 0;
+      if (!state.stitch) return;
+      paintPreview();
+    });
+  }
+
+  function onSeamPointerDown(event) {
+    const handle = event.target.closest('.seam');
+    if (!handle) return;
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const index = Number(handle.dataset.index);
+    const seam = stitch.seams[index];
+    if (!seam) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    state.suppressSeamClick = false;
+    if (seam.overlap <= 0) return;
+
+    if (state.activeSeam !== null && state.activeSeam !== index) closeSeamSettings();
+    setSeamActiveClasses(index);
+    state.seamDrag = {
+      index,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startCut: seam.cut,
+      scale: state.previewScale || 1,
+      moved: false
+    };
+    document.body.classList.add('is-seam-dragging');
+    window.addEventListener('pointermove', onSeamPointerMove, { passive: false });
+    window.addEventListener('pointerup', onSeamPointerUp);
+    window.addEventListener('pointercancel', onSeamPointerUp);
+  }
+
+  function onSeamPointerMove(event) {
+    const drag = state.seamDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const seam = stitch.seams[drag.index];
+    if (!seam) return;
+    if (!drag.moved && Math.abs(event.clientY - drag.startY) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    event.preventDefault();
+    const delta = (event.clientY - drag.startY) / Math.max(0.0001, drag.scale);
+    const nextCut = clamp(Math.round(drag.startCut + delta), 0, seam.overlap);
+    if (nextCut !== seam.cut) {
+      seam.cut = nextCut;
+      computeSegments();
+      schedulePaint();
+    }
+  }
+
+  function onSeamPointerUp(event) {
+    const drag = state.seamDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const moved = drag.moved;
+    document.body.classList.remove('is-seam-dragging');
+    window.removeEventListener('pointermove', onSeamPointerMove);
+    window.removeEventListener('pointerup', onSeamPointerUp);
+    window.removeEventListener('pointercancel', onSeamPointerUp);
+    state.seamDrag = null;
+    if (state.stitch) {
+      computeSegments();
+      paintPreview();
+      updateEditorMeta();
+      refreshSeamSettings();
+    }
+    if (state.activeSeam == null) setSeamActiveClasses(null);
+    else setSeamActiveClasses(state.activeSeam);
+    if (moved) state.suppressSeamClick = true;
+  }
+
+  function onSeamKeyDown(event) {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    const grip = event.target.closest('.seam-grip');
+    if (!grip) return;
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const index = Number(grip.dataset.index);
+    const seam = stitch.seams[index];
+    if (!seam || seam.overlap <= 0) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 10 : 1;
+    seam.cut = clamp(seam.cut + (event.key === 'ArrowDown' ? step : -step), 0, seam.overlap);
+    computeSegments();
+    paintPreview();
+    updateEditorMeta();
+    refreshSeamSettings();
+  }
+
+  /* ==========================================================================
+     Export
+     ========================================================================== */
+  function getExportAreaLimit() {
+    const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    return coarsePointer ? 16000000 : MAX_EXPORT_AREA;
+  }
+
+  function computeExportPlan() {
+    const stitch = state.stitch;
+    if (!stitch) return { width: 0, height: 0, scale: 1, downscaled: false };
+    const W = stitch.width;
+    const H = stitch.totalHeight;
+    const areaLimit = getExportAreaLimit();
+    let scale = Math.min(1, MAX_EXPORT_HEIGHT / H, Math.sqrt(areaLimit / Math.max(1, W * H)));
+    scale = Math.max(0.05, scale);
+    let width = Math.max(1, Math.floor(W * scale));
+    let height = Math.max(1, Math.floor(H * scale));
+    if (width * height > areaLimit || height > MAX_EXPORT_HEIGHT) {
+      scale = Math.min(MAX_EXPORT_HEIGHT / H, Math.sqrt(areaLimit / Math.max(1, W * H)));
+      width = Math.max(1, Math.floor(W * scale));
+      height = Math.max(1, Math.floor(H * scale));
+    }
+    return { width, height, scale: width / W, downscaled: width < W || height < H };
+  }
+
+  function openExportModal() {
+    const stitch = state.stitch;
+    if (!stitch || state.screen !== 'editor' || state.busy) return;
+    closeSeamSettings();
+    const plan = computeExportPlan();
+    const overlapSum = stitch.seams.reduce((sum, seam) => sum + seam.overlap, 0);
+    let fixedRemoved = 0;
+    if (stitch.insets) {
+      for (let i = 1; i < stitch.heights.length; i += 1) fixedRemoved += stitch.insets.top[i] || 0;
+      for (let i = 0; i < stitch.heights.length - 1; i += 1) fixedRemoved += stitch.insets.bottom[i] || 0;
+    }
+    els.exportDims.textContent = `${formatNum(plan.width)} × ${formatNum(plan.height)} px`;
+    els.exportMeta.textContent = `${stitch.heights.length} 张截图 · ${overlapSum > 0 ? `去除重叠 ${formatNum(overlapSum)} px` : '保留原始顺序'}${fixedRemoved > 0 ? ` · 固定栏 ${formatNum(fixedRemoved)} px` : ''}`;
+    els.exportNote.hidden = !plan.downscaled;
+    if (plan.downscaled) {
+      els.exportNote.textContent = `受浏览器画布上限限制，长图会自动等比缩放到 ${formatNum(plan.width)} × ${formatNum(plan.height)} px。如需更大尺寸，可减少截图数量或降低统一宽度。`;
+    }
+    els.exportHint.hidden = plan.downscaled;
+    updateFormatUI();
+    els.exportModal.hidden = false;
+    setTimeout(() => {
+      try { els.closeExport.focus(); } catch (err) { /* ignore */ }
+    }, 30);
+  }
+
+  function closeExportModal() {
+    els.exportModal.hidden = true;
+  }
+
+  function updateFormatUI() {
+    const isJpeg = state.exportFormat === 'jpeg';
+    const buttons = els.formatSeg.querySelectorAll('[data-format]');
+    buttons.forEach((button) => {
+      const active = button.dataset.format === state.exportFormat;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    els.qualityField.hidden = !isJpeg;
+    els.downloadLabel.textContent = `生成长图 · ${state.exportFormat.toUpperCase()}`;
+    els.formatHint.textContent = isJpeg ? '体积更小，适合分享' : '适合文字截图，无损';
+    els.exportHint.textContent = isJpeg
+      ? '生成后可直接在预览页长按保存。JPEG 会略微压缩文字边缘，截图建议使用 PNG。'
+      : '生成后可直接在预览页长按保存，不需要经过文件下载目录。';
+    els.qualityValue.textContent = `${Math.round(state.exportQuality * 100)}%`;
+    els.qualityRange.value = String(Math.round(state.exportQuality * 100));
+  }
+
+  function canvasToBlob(canvas, type, quality) {
+    return new Promise((resolve, reject) => {
+      try {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('图片编码失败，可能尺寸过大'));
+        }, type, quality);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function formatBytes(bytes) {
+    const value = Number(bytes) || 0;
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function openResultViewer(blob, filename, format, plan) {
+    if (state.resultUrl) {
+      try { URL.revokeObjectURL(state.resultUrl); } catch (err) { /* ignore */ }
+      state.resultUrl = null;
+    }
+    state.resultBlob = blob;
+    state.resultFilename = filename;
+    state.resultFormat = format;
+    state.resultUrl = URL.createObjectURL(blob);
+    els.resultImage.src = state.resultUrl;
+    els.resultMeta.textContent = `${formatNum(plan.width)} × ${formatNum(plan.height)} px · ${format.toUpperCase()} · ${formatBytes(blob.size)}`;
+    const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    if (coarsePointer) {
+      els.resultTipTitle.textContent = '长按图片保存到相册';
+      els.resultTip.textContent = format === 'jpeg'
+        ? '长按上方长图，选择「存储图像」或「保存图片」；JPEG 文件体积更小。'
+        : '长按上方长图，选择「存储图像」或「保存图片」，即可进入相册。';
+    } else {
+      els.resultTipTitle.textContent = '右键另存或下载到电脑';
+      els.resultTip.textContent = '右键图片选择「图片另存为」，或点击右侧「下载到电脑」。';
+    }
+    els.resultModal.hidden = false;
+    els.resultViewport.scrollTop = 0;
+    requestAnimationFrame(() => {
+      try { els.resultDone.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
+    });
+  }
+
+  function closeResultViewer() {
+    if (!els.resultModal || els.resultModal.hidden) return;
+    els.resultModal.hidden = true;
+    const url = state.resultUrl;
+    state.resultUrl = null;
+    state.resultBlob = null;
+    state.resultFilename = '';
+    els.resultImage.removeAttribute('src');
+    if (url) {
+      setTimeout(() => {
+        try { URL.revokeObjectURL(url); } catch (err) { /* ignore */ }
+      }, 1200);
+    }
+  }
+
+  function downloadResultFile() {
+    if (!state.resultBlob || !state.resultFilename) return;
+    const url = URL.createObjectURL(state.resultBlob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = state.resultFilename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch (err) { /* ignore */ }
+    }, 10000);
+    showToast('已下载到电脑', 'success');
+  }
+
+  async function generateExport() {
+    const stitch = state.stitch;
+    if (!stitch || state.busy) return;
+    const format = state.exportFormat;
+    const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const ext = format === 'jpeg' ? 'jpg' : 'png';
+    const plan = computeExportPlan();
+    if (!plan.width || !plan.height) {
+      showToast('长图尺寸无效，无法生成', 'error');
+      return;
+    }
+    closeExportModal();
+    state.busy = true;
+    els.saveBtn.disabled = true;
+    showLoading('正在生成长图', '正在绘制高清画布…', 18);
+    await nextFrame();
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = plan.width;
+      canvas.height = plan.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('浏览器无法创建画布');
+      drawComposite(canvas, plan.width, plan.height, plan.width / stitch.width);
+
+      setLoadingProgress(62, `正在编码 ${format.toUpperCase()} 图片…`);
+      await nextFrame();
+      const quality = format === 'jpeg' ? state.exportQuality : undefined;
+      const blob = await canvasToBlob(canvas, mime, quality);
+      setLoadingProgress(94, '正在准备长图预览…');
+      openResultViewer(blob, `缝图-${nowStamp()}.${ext}`, format, plan);
+      try {
+        if (typeof els.resultImage.decode === 'function') {
+          await Promise.race([els.resultImage.decode(), sleep(2500)]);
+        } else {
+          await new Promise((resolve) => {
+            if (els.resultImage.complete) resolve();
+            else {
+              els.resultImage.addEventListener('load', resolve, { once: true });
+              els.resultImage.addEventListener('error', resolve, { once: true });
+              setTimeout(resolve, 1800);
+            }
+          });
+        }
+      } catch (err) {
+        /* 预览解码失败时仍打开查看器，图片错误提示会告知用户 */
+      }
+      await sleep(120);
+      hideLoading();
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      showToast(`生成长图失败：${err && err.message ? err.message : '未知错误'}，可尝试 JPEG 或较小的统一宽度`, 'error');
+    } finally {
+      state.busy = false;
+      els.saveBtn.disabled = false;
+      updateStartButton();
+    }
+  }
+
+  /* ==========================================================================
+     Demo screenshots
+     ========================================================================== */
+  function makeRoundRectPath(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function drawDemoPage() {
+    const W = 780;
+    const H = 2600;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const sans = '"PingFang SC","Noto Sans CJK SC","Source Han Sans SC","Microsoft YaHei",sans-serif';
+
+    // paper
+    ctx.fillStyle = '#f6f0e5';
+    ctx.fillRect(0, 0, W, H);
+
+    // hero sky
+    let grad = ctx.createLinearGradient(0, 0, 0, 520);
+    grad.addColorStop(0, '#f8d49e');
+    grad.addColorStop(0.52, '#f1b39b');
+    grad.addColorStop(1, '#dfa0a5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 560);
+
+    // sun
+    ctx.beginPath();
+    ctx.arc(612, 160, 76, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,237,190,.92)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(612, 160, 104, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,240,200,.18)';
+    ctx.fill();
+
+    // far hills
+    ctx.beginPath();
+    ctx.moveTo(0, 440);
+    ctx.bezierCurveTo(140, 356, 280, 454, 428, 402);
+    ctx.bezierCurveTo(572, 352, 664, 408, 780, 382);
+    ctx.lineTo(780, 560);
+    ctx.lineTo(0, 560);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(85,111,111,.22)';
+    ctx.fill();
+
+    // sea
+    grad = ctx.createLinearGradient(0, 452, 0, 570);
+    grad.addColorStop(0, '#9dbfc4');
+    grad.addColorStop(1, '#7da4ad');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 452, W, 118);
+
+    // sea sparkle waves
+    ctx.strokeStyle = 'rgba(255,244,216,.55)';
+    ctx.lineWidth = 2.4;
+    for (let i = 0; i < 7; i += 1) {
+      const y = 474 + i * 13;
+      ctx.beginPath();
+      ctx.moveTo(52 + (i % 3) * 22, y);
+      ctx.quadraticCurveTo(150 + (i % 4) * 40, y - 6, 270 + (i % 5) * 48, y);
+      ctx.stroke();
+    }
+
+    // top label
+    ctx.fillStyle = 'rgba(36,45,50,.72)';
+    ctx.font = `700 17px ${sans}`;
+    ctx.fillText('WEEKEND NOTES   /   NO.03', 52, 84);
+    ctx.strokeStyle = 'rgba(36,45,50,.32)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(52, 100);
+    ctx.lineTo(312, 100);
+    ctx.stroke();
+
+    // hero title
+    ctx.fillStyle = '#1e2d33';
+    ctx.font = `800 64px ${sans}`;
+    ctx.fillText('去海边，', 52, 338);
+    ctx.fillText('吹一整个下午的风', 52, 416);
+
+    // hero meta
+    makeRoundRectPath(ctx, 52, 468, 372, 44, 22);
+    ctx.fillStyle = 'rgba(251,247,239,.74)';
+    ctx.fill();
+    ctx.fillStyle = '#31484e';
+    ctx.font = `600 19px ${sans}`;
+    ctx.fillText('福建 · 东山岛     /     2026.10.18', 74, 497);
+
+    // paper body
+    ctx.fillStyle = '#fbf7ef';
+    ctx.fillRect(0, 570, W, H - 570);
+
+    // intro tag
+    ctx.fillStyle = '#bd6f54';
+    ctx.font = `700 17px ${sans}`;
+    ctx.fillText('旅行手记 / 海边 48 小时', 52, 632);
+
+    // intro
+    ctx.fillStyle = '#28343b';
+    ctx.font = `500 30px ${sans}`;
+    ctx.fillText('周五下班后出发，赶在日落前抵达海边。', 52, 690);
+    ctx.fillText('没有行程表，只有一间靠海的民宿。', 52, 736);
+
+    // divider
+    ctx.strokeStyle = 'rgba(48,42,36,.12)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(52, 780);
+    ctx.lineTo(728, 780);
+    ctx.stroke();
+
+    // section 1
+    ctx.fillStyle = '#b96950';
+    ctx.font = `700 18px ${sans}`;
+    ctx.fillText('01', 52, 828);
+    ctx.fillStyle = '#1f2d33';
+    ctx.font = `750 35px ${sans}`;
+    ctx.fillText('出发之前', 96, 832);
+
+    ctx.fillStyle = '#4e5559';
+    ctx.font = `400 27px ${sans}`;
+    ctx.fillText('只带了一个帆布包、一台相机和一本没读完的书。', 52, 890);
+    ctx.fillText('高铁两小时，再换乘小巴，海风会先替城市说再见。', 52, 934);
+
+    // info cards
+    const drawCard = (y, number, title, desc) => {
+      makeRoundRectPath(ctx, 52, y, 676, 104, 20);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(48,42,36,.06)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(96, y + 52, 22, 0, Math.PI * 2);
+      ctx.fillStyle = '#f5e8dc';
+      ctx.fill();
+      ctx.fillStyle = '#a95f49';
+      ctx.font = `700 15px ${sans}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(number, 96, y + 57);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#26343a';
+      ctx.font = `700 22px ${sans}`;
+      ctx.fillText(title, 136, y + 44);
+      ctx.fillStyle = '#7c7975';
+      ctx.font = `400 20px ${sans}`;
+      ctx.fillText(desc, 136, y + 76);
+    };
+    drawCard(984, '01', '轻装出发', '一个背包，一双好走的鞋，就够了。');
+    drawCard(1104, '02', '离线地图', '沿途信号时有时无，提前把路线存进手机。');
+
+    // quote
+    makeRoundRectPath(ctx, 52, 1244, 676, 132, 22);
+    ctx.fillStyle = '#f9ded2';
+    ctx.fill();
+    ctx.fillStyle = '#b96248';
+    ctx.font = '800 52px Georgia, serif';
+    ctx.fillText('“', 74, 1306);
+    ctx.fillStyle = '#5a3930';
+    ctx.font = `600 27px ${sans}`;
+    ctx.fillText('海风会把所有没说完的话，慢慢吹散。', 112, 1306);
+    ctx.fillStyle = '#a77867';
+    ctx.font = `500 18px ${sans}`;
+    ctx.fillText('—— 写在出发之前', 112, 1346);
+
+    const drawPhoto = (x, y, w, h, variant) => {
+      ctx.save();
+      makeRoundRectPath(ctx, x, y, w, h, 24);
+      ctx.clip();
+      const sky = ctx.createLinearGradient(0, y, 0, y + h);
+      if (variant === 1) {
+        sky.addColorStop(0, '#f6c79a');
+        sky.addColorStop(0.48, '#e9a18f');
+        sky.addColorStop(1, '#8b9ba6');
+      } else {
+        sky.addColorStop(0, '#c7d9dd');
+        sky.addColorStop(0.5, '#9fb9c1');
+        sky.addColorStop(1, '#6d8b95');
+      }
+      ctx.fillStyle = sky;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.beginPath();
+      ctx.arc(x + w * 0.72, y + h * 0.38, h * 0.13, 0, Math.PI * 2);
+      ctx.fillStyle = variant === 1 ? 'rgba(255,240,198,.92)' : 'rgba(245,249,236,.7)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x, y + h * 0.63);
+      ctx.quadraticCurveTo(x + w * 0.22, y + h * 0.58, x + w * 0.42, y + h * 0.65);
+      ctx.quadraticCurveTo(x + w * 0.64, y + h * 0.72, x + w, y + h * 0.6);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fillStyle = variant === 1 ? '#718e9b' : '#5f7d88';
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,250,235,.55)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 5; i += 1) {
+        const wy = y + h * (0.7 + i * 0.055);
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.1, wy);
+        ctx.quadraticCurveTo(x + w * 0.4, wy - 7, x + w * 0.72, wy);
+        ctx.stroke();
+      }
+
+      // bold foreground silhouette
+      ctx.beginPath();
+      ctx.moveTo(x, y + h);
+      ctx.lineTo(x, y + h * 0.84);
+      ctx.quadraticCurveTo(x + w * 0.18, y + h * 0.76, x + w * 0.32, y + h * 0.86);
+      ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.96, x + w * 0.72, y + h * 0.82);
+      ctx.quadraticCurveTo(x + w * 0.88, y + h * 0.74, x + w, y + h * 0.84);
+      ctx.lineTo(x + w, y + h);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(36,55,60,.68)';
+      ctx.fill();
+      ctx.restore();
+
+      // caption pill
+      makeRoundRectPath(ctx, x + 20, y + h - 52, 232, 34, 17);
+      ctx.fillStyle = 'rgba(24,34,38,.55)';
+      ctx.fill();
+      ctx.fillStyle = '#fff9ea';
+      ctx.font = `600 16px ${sans}`;
+      ctx.fillText(variant === 1 ? '南门湾 · 傍晚六点' : '环岛路 · 风很轻', x + 38, y + h - 29);
+    };
+
+    drawPhoto(52, 1412, 676, 300, 1);
+
+    // section 2
+    ctx.fillStyle = '#b96950';
+    ctx.font = `700 18px ${sans}`;
+    ctx.fillText('02', 52, 1780);
+    ctx.fillStyle = '#1f2d33';
+    ctx.font = `750 35px ${sans}`;
+    ctx.fillText('沿着海岸线走', 96, 1784);
+
+    ctx.fillStyle = '#4e5559';
+    ctx.font = `400 27px ${sans}`;
+    ctx.fillText('沿着环岛路慢慢开，遇到喜欢的地方就停下来。', 52, 1842);
+    ctx.fillText('海是灰蓝色的，风里有咸味。', 52, 1886);
+
+    // chips
+    const chips = [
+      { label: '南门湾', x: 52, w: 130 },
+      { label: '苏峰山', x: 198, w: 130 },
+      { label: '金銮湾', x: 344, w: 130 }
+    ];
+    chips.forEach((chip) => {
+      makeRoundRectPath(ctx, chip.x, 1926, chip.w, 46, 23);
+      ctx.fillStyle = '#eee4d7';
+      ctx.fill();
+      ctx.fillStyle = '#5a5048';
+      ctx.font = `600 20px ${sans}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(chip.label, chip.x + chip.w / 2, 1957);
+      ctx.textAlign = 'left';
+    });
+
+    drawPhoto(52, 2012, 676, 300, 2);
+
+    // closing
+    ctx.fillStyle = '#4e5559';
+    ctx.font = `400 27px ${sans}`;
+    ctx.fillText('回来的时候，鞋里都是细沙。', 52, 2372);
+    ctx.fillText('但心情轻得像被海洗过。', 52, 2416);
+
+    ctx.fillStyle = '#1f2d33';
+    ctx.font = `750 34px ${sans}`;
+    ctx.textAlign = 'center';
+    ctx.fillText('把周末，留给海浪。', W / 2, 2500);
+    ctx.fillStyle = '#a69b8f';
+    ctx.font = `500 15px ${sans}`;
+    ctx.fillText('缝图 · SAMPLE LONG SHOT · 2026', W / 2, 2560);
+    ctx.textAlign = 'left';
+
+    return canvas;
+  }
+
+  async function buildDemoFiles() {
+    const page = drawDemoPage();
+    // 780 × 8/13 = 480，因此 1391 / 598 / 793 在 480px 比对宽度下都是整数，
+    // 示例图的重叠像素可以做到像素级精确，方便直接体验自动去重。
+    const scrolls = [0, 598, 1196];
+    const files = [];
+    for (let i = 0; i < scrolls.length; i += 1) {
+      setLoadingProgress(24 + (36 * (i + 1)) / scrolls.length, `正在生成第 ${i + 1} / ${scrolls.length} 张示例截图…`);
+      await nextFrame();
+      const canvas = document.createElement('canvas');
+      canvas.width = page.width;
+      canvas.height = 1391;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f6f0e5';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(page, 0, -scrolls[i]);
+      const blob = await canvasToBlob(canvas, 'image/png');
+      files.push(new File([blob], `缝图示例-${String(i + 1).padStart(2, '0')}.png`, { type: 'image/png' }));
+    }
+    return files;
+  }
+
+  async function loadDemo() {
+    if (state.busy || state.adding || state.demoBusy) return;
+    if (state.images.length) {
+      showToast('请先移除已选图片，再加载示例', 'info');
+      return;
+    }
+    state.demoBusy = true;
+    showLoading('正在准备示例截图', '正在绘制一张 2600px 长的示例页面…', 12);
+    await nextFrame();
+    try {
+      await sleep(80);
+      const files = await buildDemoFiles();
+      setLoadingProgress(74, '正在载入示例图片…');
+      await nextFrame();
+      hideLoading();
+      state.demoBusy = false;
+      await addFiles(files);
+    } catch (err) {
+      console.error(err);
+      hideLoading();
+      state.demoBusy = false;
+      showToast(`示例加载失败：${err && err.message ? err.message : '未知错误'}`, 'error');
+    }
+  }
+
+  /* ==========================================================================
+     Events
+     ========================================================================== */
+  function bindEvents() {
+    els.dropzone.addEventListener('click', (event) => {
+      if (event.target.closest('#demoBtn')) return;
+      openFilePicker();
+    });
+    els.dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openFilePicker();
+      }
+    });
+    els.demoBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      loadDemo();
+    });
+    els.addMoreBtn.addEventListener('click', openFilePicker);
+    els.sortBtn.addEventListener('click', sortImagesByName);
+    els.fileInput.addEventListener('change', async (event) => {
+      const files = event.target.files ? Array.from(event.target.files) : [];
+      event.target.value = '';
+      if (files.length) await addFiles(files);
+    });
+
+    els.backBtn.addEventListener('click', showHome);
+    els.startBtn.addEventListener('click', startStitch);
+    els.topExportBtn.addEventListener('click', openExportModal);
+    els.saveBtn.addEventListener('click', openExportModal);
+    els.restoreBtn.addEventListener('click', restoreAutoSeams);
+    els.restoreBtnBottom.addEventListener('click', restoreAutoSeams);
+
+    els.widthSelect.addEventListener('change', updateFooterSummary);
+    els.dedupeToggle.addEventListener('change', updateFooterSummary);
+
+    // thumbnails: click, keyboard, drag reorder
+    els.thumbGrid.addEventListener('click', (event) => {
+      const remove = event.target.closest('[data-remove]');
+      if (remove) {
+        removeImage(Number(remove.dataset.remove));
+        return;
+      }
+      const move = event.target.closest('[data-move]');
+      if (move) {
+        moveImage(Number(move.dataset.move), Number(move.dataset.dir));
+        return;
+      }
+      if (event.target.closest('[data-action="add"]')) openFilePicker();
+    });
+
+    els.thumbGrid.addEventListener('keydown', (event) => {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-action="add"]')) {
+        event.preventDefault();
+        openFilePicker();
+      }
+    });
+
+    els.thumbGrid.addEventListener('dragstart', (event) => {
+      const thumb = event.target.closest('.thumb');
+      if (!thumb) return;
+      state.dragId = Number(thumb.dataset.id);
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        try { event.dataTransfer.setData('text/plain', String(state.dragId)); } catch (err) { /* ignore */ }
+      }
+      requestAnimationFrame(() => thumb.classList.add('dragging'));
+    });
+
+    els.thumbGrid.addEventListener('dragover', (event) => {
+      if (!state.dragId) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      const target = event.target.closest('.thumb');
+      els.thumbGrid.querySelectorAll('.thumb').forEach((thumb) => {
+        thumb.classList.toggle('drop-target', Boolean(target) && thumb === target && Number(thumb.dataset.id) !== state.dragId);
+      });
+    });
+
+    els.thumbGrid.addEventListener('dragleave', (event) => {
+      if (event.target === els.thumbGrid) {
+        els.thumbGrid.querySelectorAll('.drop-target').forEach((node) => node.classList.remove('drop-target'));
+      }
+    });
+
+    els.thumbGrid.addEventListener('drop', (event) => {
+      if (!state.dragId) return;
+      event.preventDefault();
+      const target = event.target.closest('.thumb');
+      els.thumbGrid.querySelectorAll('.thumb').forEach((node) => node.classList.remove('drop-target', 'dragging'));
+      if (!target) {
+        state.dragId = null;
+        return;
+      }
+      const targetId = Number(target.dataset.id);
+      if (targetId === state.dragId) {
+        state.dragId = null;
+        return;
+      }
+      const from = state.images.findIndex((img) => img.id === state.dragId);
+      const targetIndex = state.images.findIndex((img) => img.id === targetId);
+      if (from < 0 || targetIndex < 0) {
+        state.dragId = null;
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      let insertIndex = targetIndex + (event.clientY > rect.top + rect.height / 2 ? 1 : 0);
+      const [moved] = state.images.splice(from, 1);
+      if (from < insertIndex) insertIndex -= 1;
+      insertIndex = clamp(insertIndex, 0, state.images.length);
+      state.images.splice(insertIndex, 0, moved);
+      state.dragId = null;
+      renderThumbGrid();
+    });
+
+    els.thumbGrid.addEventListener('dragend', () => {
+      state.dragId = null;
+      els.thumbGrid.querySelectorAll('.thumb').forEach((node) => node.classList.remove('dragging', 'drop-target'));
+    });
+
+    // seam interactions
+    els.seamLayer.addEventListener('pointerdown', onSeamPointerDown);
+    els.seamLayer.addEventListener('click', onSeamClick);
+    els.seamLayer.addEventListener('keydown', onSeamKeyDown);
+    els.ssClose.addEventListener('click', closeSeamSettings);
+    els.ssDone.addEventListener('click', closeSeamSettings);
+    els.ssOverlap.addEventListener('input', () => applySeamOverlap(els.ssOverlap.value));
+    els.ssCut.addEventListener('input', () => applySeamCut(els.ssCut.value));
+    els.ssAuto.addEventListener('click', restoreActiveSeam);
+
+    // export sheet
+    els.closeExport.addEventListener('click', closeExportModal);
+    els.exportModal.addEventListener('click', (event) => {
+      if (event.target.closest('[data-close-export]')) closeExportModal();
+    });
+    els.formatSeg.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-format]');
+      if (!button) return;
+      state.exportFormat = button.dataset.format === 'jpeg' ? 'jpeg' : 'png';
+      updateFormatUI();
+    });
+    els.qualityRange.addEventListener('input', () => {
+      state.exportQuality = clamp(Number(els.qualityRange.value) / 100, 0.6, 1);
+      els.qualityValue.textContent = `${Math.round(state.exportQuality * 100)}%`;
+    });
+    els.downloadBtn.addEventListener('click', generateExport);
+
+    // export result viewer
+    els.closeResult.addEventListener('click', closeResultViewer);
+    els.resultDone.addEventListener('click', closeResultViewer);
+    els.resultDownload.addEventListener('click', downloadResultFile);
+    els.resultImage.addEventListener('error', () => {
+      if (els.resultModal.hidden) return;
+      showToast('长图预览加载失败，可返回后改用 JPEG 或较小的统一宽度', 'error');
+    });
+
+    // global drag and drop
+    window.addEventListener('dragover', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+      if (state.screen === 'home' && !state.busy && !state.adding && els.exportModal.hidden && els.loadingOverlay.hidden) {
+        els.dropzone.classList.add('drag-over');
+      }
+    });
+    window.addEventListener('dragleave', (event) => {
+      if (!event.relatedTarget) els.dropzone.classList.remove('drag-over');
+    });
+    window.addEventListener('drop', async (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      els.dropzone.classList.remove('drag-over');
+      if (state.screen !== 'home' || state.busy || state.adding || !els.exportModal.hidden || !els.loadingOverlay.hidden) return;
+      const files = event.dataTransfer && event.dataTransfer.files;
+      if (files && files.length) await addFiles(files);
+    });
+    els.dropzone.addEventListener('dragenter', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      els.dropzone.classList.add('drag-over');
+    });
+    els.dropzone.addEventListener('dragleave', (event) => {
+      if (!els.dropzone.contains(event.relatedTarget)) els.dropzone.classList.remove('drag-over');
+    });
+
+    // sizing
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        if (state.screen !== 'editor') return;
+        if (state.fitRaf) cancelAnimationFrame(state.fitRaf);
+        state.fitRaf = requestAnimationFrame(() => {
+          state.fitRaf = 0;
+          if (state.screen === 'editor') fitPreview();
+        });
+      });
+      observer.observe(els.previewStage);
+    }
+    window.addEventListener('resize', () => {
+      if (state.screen !== 'editor') return;
+      if (state.fitRaf) cancelAnimationFrame(state.fitRaf);
+      state.fitRaf = requestAnimationFrame(() => {
+        state.fitRaf = 0;
+        if (state.screen === 'editor') fitPreview();
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || state.busy) return;
+      if (!els.resultModal.hidden) {
+        closeResultViewer();
+      } else if (!els.seamSettings.hidden) {
+        closeSeamSettings();
+      } else if (!els.exportModal.hidden) {
+        closeExportModal();
+      }
+    });
+  }
+
+  /* ==========================================================================
+     Boot
+     ========================================================================== */
+  bindEvents();
+  updateHomeUI();
+})();
+</script>
+</body>
+</html>
