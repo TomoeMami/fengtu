@@ -286,6 +286,7 @@ img{max-width:100%}
 .status-pill.neutral::before{background:#9a93a8;box-shadow:none}
 .meta-detail{font-size:11px;color:var(--muted);line-height:1.5;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .restore-btn{flex:none}
+.meta-actions{display:flex;align-items:center;gap:2px;flex:none}
 .stage-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 22px 3px}
 .preview-stage{
   flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative;overscroll-behavior:contain;
@@ -726,7 +727,10 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
           <span class="status-pill" id="metaPill"><span id="metaTitle">智能拼接完成</span></span>
           <span class="meta-detail" id="metaDetail"></span>
         </div>
-        <button class="text-btn restore-btn" id="restoreBtn" type="button" disabled>恢复自动</button>
+        <div class="meta-actions">
+          <button class="text-btn accent" id="edgeCropBtn" type="button">裁切边缘</button>
+          <button class="text-btn restore-btn" id="restoreBtn" type="button" disabled>恢复自动</button>
+        </div>
       </div>
       <div class="stage-wrap">
         <div class="preview-stage" id="previewStage">
@@ -773,6 +777,41 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         <div class="ss-actions">
           <button class="ghost-btn" id="ssAuto" type="button">恢复自动</button>
           <button class="primary-btn" id="ssDone" type="button">完成</button>
+        </div>
+      </div>
+      <div class="seam-settings" id="edgePanel" hidden>
+        <div class="ss-head">
+          <div>
+            <strong>裁切边缘</strong>
+            <span id="edgeSub">顶部/底部作用在首尾图片，左右对所有图片生效</span>
+          </div>
+          <button class="ss-close" id="edgeClose" type="button" aria-label="关闭边缘裁切">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>顶部裁切</span><strong id="edgeTopValue">0 px</strong></div>
+          <input type="range" id="edgeTop" min="0" max="1" value="0" step="1" aria-label="顶部裁切高度">
+          <p class="ss-hint" id="edgeTopHint">作用在第一张图顶部 · 自动识别 0 px</p>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>底部裁切</span><strong id="edgeBottomValue">0 px</strong></div>
+          <input type="range" id="edgeBottom" min="0" max="1" value="0" step="1" aria-label="底部裁切高度">
+          <p class="ss-hint" id="edgeBottomHint">作用在最后一张图底部 · 自动识别 0 px</p>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>左侧裁切</span><strong id="edgeLeftValue">0 px</strong></div>
+          <input type="range" id="edgeLeft" min="0" max="1" value="0" step="1" aria-label="左侧裁切宽度">
+          <p class="ss-hint" id="edgeLeftHint">作用在所有图片左侧 · 可裁掉多余留白或黑边</p>
+        </div>
+        <div class="ss-field">
+          <div class="ss-label"><span>右侧裁切</span><strong id="edgeRightValue">0 px</strong></div>
+          <input type="range" id="edgeRight" min="0" max="1" value="0" step="1" aria-label="右侧裁切宽度">
+          <p class="ss-hint" id="edgeRightHint">作用在所有图片右侧 · 可裁掉多余留白或黑边</p>
+        </div>
+        <div class="ss-actions">
+          <button class="ghost-btn" id="edgeAuto" type="button">恢复自动</button>
+          <button class="primary-btn" id="edgeDone" type="button">完成</button>
         </div>
       </div>
       <div class="editor-bar">
@@ -958,6 +997,24 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     ssCutValue: document.getElementById('ssCutValue'),
     ssAuto: document.getElementById('ssAuto'),
     ssDone: document.getElementById('ssDone'),
+    edgeCropBtn: document.getElementById('edgeCropBtn'),
+    edgePanel: document.getElementById('edgePanel'),
+    edgeSub: document.getElementById('edgeSub'),
+    edgeClose: document.getElementById('edgeClose'),
+    edgeDone: document.getElementById('edgeDone'),
+    edgeAuto: document.getElementById('edgeAuto'),
+    edgeTop: document.getElementById('edgeTop'),
+    edgeTopValue: document.getElementById('edgeTopValue'),
+    edgeTopHint: document.getElementById('edgeTopHint'),
+    edgeBottom: document.getElementById('edgeBottom'),
+    edgeBottomValue: document.getElementById('edgeBottomValue'),
+    edgeBottomHint: document.getElementById('edgeBottomHint'),
+    edgeLeft: document.getElementById('edgeLeft'),
+    edgeLeftValue: document.getElementById('edgeLeftValue'),
+    edgeLeftHint: document.getElementById('edgeLeftHint'),
+    edgeRight: document.getElementById('edgeRight'),
+    edgeRightValue: document.getElementById('edgeRightValue'),
+    edgeRightHint: document.getElementById('edgeRightHint'),
 
     fileInput: document.getElementById('fileInput'),
     exportModal: document.getElementById('exportModal'),
@@ -1012,6 +1069,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     activeSeam: null,
     suppressSeamClick: false,
     seamGeometryRaf: 0,
+    edgeGeometryRaf: 0,
     resultUrl: null,
     resultBlob: null,
     resultFilename: '',
@@ -1784,6 +1842,19 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         insets: { top: topInsets, bottom: bottomInsets },
         // 自动识别的裁切量留一份快照，接缝面板里的「恢复自动」以此为准
         autoInsets: { top: topInsets.slice(), bottom: bottomInsets.slice() },
+        // 首尾与左右两侧的裁切量：默认沿用第一张顶部、最后一张底部的自动识别结果
+        edges: {
+          top: topInsets[0] || 0,
+          bottom: bottomInsets[imageCount - 1] || 0,
+          left: 0,
+          right: 0
+        },
+        autoEdges: {
+          top: topInsets[0] || 0,
+          bottom: bottomInsets[imageCount - 1] || 0,
+          left: 0,
+          right: 0
+        },
         photoCount: (compInsets.screenshot || []).filter((value) => !value).length,
         dedupe: els.dedupeToggle.checked,
         segments: [],
@@ -1810,14 +1881,18 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const count = stitch.heights.length;
     const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : null;
     const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : null;
+    const edges = stitch.edges || {};
+    const edgeTop = Math.max(0, Math.round(edges.top || 0));
+    const edgeBottom = Math.max(0, Math.round(edges.bottom || 0));
     let y = 0;
     const segments = [];
     for (let i = 0; i < count; i += 1) {
       const H = stitch.heights[i];
       const topInset = topInsets ? topInsets[i] || 0 : 0;
       const bottomInset = bottomInsets ? bottomInsets[i] || 0 : 0;
-      const start = i === 0 ? 0 : topInset + stitch.seams[i - 1].cut;
-      const end = i === count - 1 ? H : H - bottomInset - stitch.seams[i].overlap + stitch.seams[i].cut;
+      // 第一张的顶部、最后一张的底部由「裁切边缘」控制，其余由接缝控制
+      const start = i === 0 ? edgeTop : topInset + stitch.seams[i - 1].cut;
+      const end = i === count - 1 ? H - edgeBottom : H - bottomInset - stitch.seams[i].overlap + stitch.seams[i].cut;
       const safeStart = clamp(start, 0, H);
       const safeEnd = clamp(end, 0, H);
       segments.push({
@@ -1839,6 +1914,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function showEditor() {
     state.screen = 'editor';
     closeSeamSettings();
+    closeEdgePanel();
     els.homeScreen.hidden = true;
     els.editorScreen.hidden = false;
     els.brandHome.hidden = true;
@@ -1863,6 +1939,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function showHome() {
     if (state.busy) return;
     closeSeamSettings();
+    closeEdgePanel();
     closeExportModal();
     closeResultViewer();
     state.screen = 'home';
@@ -1877,6 +1954,14 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     updateHomeUI();
   }
 
+  // 输出宽度 = 统一宽度 - 左右裁切量
+  function getOutputWidth() {
+    const stitch = state.stitch;
+    if (!stitch) return 1;
+    const edges = stitch.edges || {};
+    return Math.max(1, stitch.width - Math.max(0, edges.left || 0) - Math.max(0, edges.right || 0));
+  }
+
   function fitPreview() {
     const stitch = state.stitch;
     if (!stitch || state.screen !== 'editor') return;
@@ -1885,15 +1970,16 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const padLeft = parseFloat(stageStyle.paddingLeft) || 0;
     const padRight = parseFloat(stageStyle.paddingRight) || 0;
     const available = Math.max(120, stage.clientWidth - padLeft - padRight);
+    const outWidth = getOutputWidth();
 
     let cssWidth = Math.min(available, 680);
-    cssWidth = Math.min(cssWidth, Math.max(stitch.width, 360));
+    cssWidth = Math.min(cssWidth, Math.max(outWidth, 360));
     cssWidth = Math.max(1, Math.round(cssWidth));
-    const cssHeight = Math.max(1, Math.round((stitch.totalHeight * cssWidth) / stitch.width));
+    const cssHeight = Math.max(1, Math.round((stitch.totalHeight * cssWidth) / outWidth));
 
     let dpr = Math.min(2, window.devicePixelRatio || 1);
     let physWidth = Math.max(1, Math.round(cssWidth * dpr));
-    let physHeight = Math.max(1, Math.round(stitch.totalHeight * (physWidth / stitch.width)));
+    let physHeight = Math.max(1, Math.round(stitch.totalHeight * (physWidth / outWidth)));
     if (physHeight > MAX_PREVIEW_PIXEL_HEIGHT) {
       const factor = MAX_PREVIEW_PIXEL_HEIGHT / physHeight;
       physWidth = Math.max(1, Math.round(physWidth * factor));
@@ -1908,10 +1994,10 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.longPreview.style.width = `${cssWidth}px`;
     els.longPreview.style.height = `${cssHeight}px`;
 
-    state.previewScale = cssWidth / stitch.width;
+    state.previewScale = cssWidth / outWidth;
     state.previewCssWidth = cssWidth;
 
-    drawComposite(canvas, physWidth, physHeight, physWidth / stitch.width);
+    drawComposite(canvas, physWidth, physHeight, physWidth / outWidth);
     layoutSeams();
   }
 
@@ -1920,7 +2006,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     if (!stitch) return;
     const canvas = els.previewCanvas;
     if (!canvas.width || !canvas.height) return;
-    drawComposite(canvas, canvas.width, canvas.height, canvas.width / stitch.width);
+    drawComposite(canvas, canvas.width, canvas.height, canvas.width / getOutputWidth());
     layoutSeams();
   }
 
@@ -1936,6 +2022,12 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
+    // 左右裁切：在统一宽度坐标系里切掉两侧，再把剩余部分铺满输出宽度
+    const edges = stitch.edges || {};
+    const cropLeft = Math.max(0, edges.left || 0);
+    const cropRight = Math.max(0, edges.right || 0);
+    const visibleWidth = Math.max(1, stitch.width - cropLeft - cropRight);
+
     for (let i = 0; i < stitch.segments.length; i += 1) {
       const segment = stitch.segments[i];
       if (segment.height <= 0.001) continue;
@@ -1943,12 +2035,15 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       if (!image || !image.bitmap) continue;
       const sourceHeight = image.height;
       const scaledHeight = stitch.heights[segment.i];
+      const sourcePerOutput = image.width / stitch.width;
       const sy = (segment.start / scaledHeight) * sourceHeight;
       const sh = ((segment.end - segment.start) / scaledHeight) * sourceHeight;
+      const sx = cropLeft * sourcePerOutput;
+      const sw = visibleWidth * sourcePerOutput;
       const dy0 = Math.round(segment.y * scale);
       const dy1 = Math.min(outHeight, Math.round((segment.y + segment.height) * scale));
-      if (dy1 <= dy0 || sh <= 0.0001) continue;
-      ctx.drawImage(image.bitmap, 0, sy, image.width, sh, 0, dy0, outWidth, dy1 - dy0);
+      if (dy1 <= dy0 || sh <= 0.0001 || sw <= 0.0001) continue;
+      ctx.drawImage(image.bitmap, sx, sy, sw, sh, 0, dy0, outWidth, dy1 - dy0);
     }
   }
 
@@ -2029,7 +2124,12 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const percent = stitch.sourceTotal ? Math.round((overlapSum / stitch.sourceTotal) * 100) : 0;
     const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
     const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
-    let fixedRemoved = 0;
+    const edges = stitch.edges || {};
+    const edgeTop = Math.max(0, Math.round(edges.top || 0));
+    const edgeBottom = Math.max(0, Math.round(edges.bottom || 0));
+    const edgeLeft = Math.max(0, Math.round(edges.left || 0));
+    const edgeRight = Math.max(0, Math.round(edges.right || 0));
+    let fixedRemoved = edgeTop + edgeBottom;
     for (let i = 1; i < imageCount; i += 1) fixedRemoved += topInsets[i] || 0;
     for (let i = 0; i < imageCount - 1; i += 1) fixedRemoved += bottomInsets[i] || 0;
 
@@ -2037,6 +2137,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     if (overlapSum > 0) parts.push(`去除重叠 ${formatNum(overlapSum)} px${percent ? `（${percent}%）` : ''}`);
     else if (imageCount > 1) parts.push(dedupeOn ? '未检测到重叠' : '自动去重已关闭');
     if (fixedRemoved > 0) parts.push(`跳过固定栏 ${formatNum(fixedRemoved)} px`);
+    if (edgeLeft + edgeRight > 0) parts.push(`左右裁切 ${formatNum(edgeLeft + edgeRight)} px`);
     if (photoCount > 0 && photoCount < imageCount) parts.push(`${photoCount} 张普通图片未裁切`);
     if (seams.length) parts.push(`${seams.length} 处接缝`);
     if (manualCount) parts.push(`已手动调整 ${manualCount} 处`);
@@ -2063,7 +2164,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.metaPill.className = pillClass;
     els.metaTitle.textContent = title;
     els.metaDetail.textContent = parts.join(' · ');
-    els.barDims.textContent = `${formatNum(stitch.width)} × ${formatNum(stitch.totalHeight)} px`;
+    els.barDims.textContent = `${formatNum(getOutputWidth())} × ${formatNum(stitch.totalHeight)} px`;
     if (overlapSum > 0) {
       els.barSub.textContent = `${formatNum(overlapSum)} px 重复内容已去除${fixedRemoved > 0 ? ` · 固定栏跳过 ${formatNum(fixedRemoved)} px` : ''}`;
     } else if (fixedRemoved > 0) {
@@ -2228,6 +2329,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function openSeamSettings(index) {
     const stitch = state.stitch;
     if (!stitch || index < 0 || index >= stitch.seams.length) return;
+    closeEdgePanel();
     state.activeSeam = index;
     setSeamActiveClasses(index);
     refreshSeamSettings();
@@ -2368,6 +2470,107 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     showToast(`接缝 ${index + 1} 已恢复自动`, 'success');
   }
 
+  /* ==========================================================================
+     Edge crop（首尾的顶部/底部 + 所有图片的左右）
+     ========================================================================== */
+  function getEdgeBounds() {
+    const stitch = state.stitch;
+    if (!stitch) return { top: 0, bottom: 0, left: 0, right: 0 };
+    const n = stitch.heights.length;
+    return {
+      top: Math.max(0, Math.floor((stitch.heights[0] || 0) * 0.45)),
+      bottom: Math.max(0, Math.floor((stitch.heights[n - 1] || 0) * 0.45)),
+      left: Math.max(0, Math.floor(stitch.width * 0.45)),
+      right: Math.max(0, Math.floor(stitch.width * 0.45))
+    };
+  }
+
+  function refreshEdgePanel() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    const edges = stitch.edges || { top: 0, bottom: 0, left: 0, right: 0 };
+    const auto = stitch.autoEdges || { top: 0, bottom: 0, left: 0, right: 0 };
+    const bounds = getEdgeBounds();
+    const rows = [
+      { side: 'top', input: els.edgeTop, value: els.edgeTopValue, hint: els.edgeTopHint, label: '第一张图顶部' },
+      { side: 'bottom', input: els.edgeBottom, value: els.edgeBottomValue, hint: els.edgeBottomHint, label: '最后一张图底部' },
+      { side: 'left', input: els.edgeLeft, value: els.edgeLeftValue, hint: els.edgeLeftHint, label: '所有图片左侧' },
+      { side: 'right', input: els.edgeRight, value: els.edgeRightValue, hint: els.edgeRightHint, label: '所有图片右侧' }
+    ];
+    rows.forEach((row) => {
+      const value = Math.max(0, Math.round(edges[row.side] || 0));
+      const autoValue = Math.max(0, Math.round(auto[row.side] || 0));
+      row.input.max = String(Math.max(1, bounds[row.side] || 0));
+      row.input.value = String(value);
+      row.value.textContent = `${formatNum(value)} px`;
+      row.hint.textContent = autoValue > 0
+        ? `${row.label} · 自动识别 ${formatNum(autoValue)} px`
+        : `${row.label} · 拖动调整裁切量`;
+    });
+    els.edgeSub.textContent = `输出 ${formatNum(getOutputWidth())} × ${formatNum(stitch.totalHeight)} px`;
+  }
+
+  function scheduleEdgeGeometry() {
+    if (state.edgeGeometryRaf) return;
+    state.edgeGeometryRaf = requestAnimationFrame(() => {
+      state.edgeGeometryRaf = 0;
+      if (!state.stitch || state.screen !== 'editor') return;
+      computeSegments();
+      fitPreview();
+      updateEditorMeta();
+      refreshEdgePanel();
+    });
+  }
+
+  function applyEdgeCrop(side, value) {
+    const stitch = state.stitch;
+    if (!stitch || !stitch.edges) return;
+    const bounds = getEdgeBounds();
+    const next = clamp(Math.round(Number(value) || 0), 0, bounds[side] || 0);
+    if (next === (stitch.edges[side] || 0)) {
+      refreshEdgePanel();
+      return;
+    }
+    stitch.edges[side] = next;
+    // 上下裁切改变长图高度，左右裁切改变输出宽度，两种情况都要重算画布
+    scheduleEdgeGeometry();
+    refreshEdgePanel();
+  }
+
+  function restoreEdgeCrop() {
+    const stitch = state.stitch;
+    if (!stitch) return;
+    if (!stitch.edges) stitch.edges = { top: 0, bottom: 0, left: 0, right: 0 };
+    const auto = stitch.autoEdges || { top: 0, bottom: 0, left: 0, right: 0 };
+    let changed = false;
+    ['top', 'bottom', 'left', 'right'].forEach((side) => {
+      const next = Math.max(0, Math.round(auto[side] || 0));
+      if ((stitch.edges[side] || 0) !== next) {
+        stitch.edges[side] = next;
+        changed = true;
+      }
+    });
+    if (!changed) {
+      showToast('边缘裁切已经是自动值', 'info');
+      return;
+    }
+    scheduleEdgeGeometry();
+    refreshEdgePanel();
+    showToast('已恢复自动边缘裁切', 'success');
+  }
+
+  function openEdgePanel() {
+    if (!state.stitch) return;
+    closeSeamSettings();
+    refreshEdgePanel();
+    els.edgePanel.hidden = false;
+  }
+
+  function closeEdgePanel() {
+    if (!els.edgePanel) return;
+    els.edgePanel.hidden = true;
+  }
+
   function onSeamClick(event) {
     const handle = event.target.closest('.seam');
     if (!handle) return;
@@ -2483,7 +2686,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function computeExportPlan() {
     const stitch = state.stitch;
     if (!stitch) return { width: 0, height: 0, scale: 1, downscaled: false };
-    const W = stitch.width;
+    const W = getOutputWidth();
     const H = stitch.totalHeight;
     const areaLimit = getExportAreaLimit();
     let scale = Math.min(1, MAX_EXPORT_HEIGHT / H, Math.sqrt(areaLimit / Math.max(1, W * H)));
@@ -2504,7 +2707,12 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     closeSeamSettings();
     const plan = computeExportPlan();
     const overlapSum = stitch.seams.reduce((sum, seam) => sum + seam.overlap, 0);
-    let fixedRemoved = 0;
+    const exportEdges = stitch.edges || {};
+    const exportEdgeTop = Math.max(0, Math.round(exportEdges.top || 0));
+    const exportEdgeBottom = Math.max(0, Math.round(exportEdges.bottom || 0));
+    const exportEdgeLeft = Math.max(0, Math.round(exportEdges.left || 0));
+    const exportEdgeRight = Math.max(0, Math.round(exportEdges.right || 0));
+    let fixedRemoved = exportEdgeTop + exportEdgeBottom;
     if (stitch.insets) {
       for (let i = 1; i < stitch.heights.length; i += 1) fixedRemoved += stitch.insets.top[i] || 0;
       for (let i = 0; i < stitch.heights.length - 1; i += 1) fixedRemoved += stitch.insets.bottom[i] || 0;
@@ -2512,7 +2720,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.exportDims.textContent = `${formatNum(plan.width)} × ${formatNum(plan.height)} px`;
     const exportPhotoCount = stitch.photoCount || 0;
     const exportUnit = exportPhotoCount > 0 ? '张图片' : '张截图';
-    els.exportMeta.textContent = `${stitch.heights.length} ${exportUnit} · ${overlapSum > 0 ? `去除重叠 ${formatNum(overlapSum)} px` : '保留原始顺序'}${fixedRemoved > 0 ? ` · 固定栏 ${formatNum(fixedRemoved)} px` : ''}${exportPhotoCount > 0 ? ` · ${exportPhotoCount} 张未裁切` : ''}`;
+    const cropSideText = exportEdgeLeft + exportEdgeRight > 0 ? ` · 左右裁切 ${formatNum(exportEdgeLeft + exportEdgeRight)} px` : '';
+    els.exportMeta.textContent = `${stitch.heights.length} ${exportUnit} · ${overlapSum > 0 ? `去除重叠 ${formatNum(overlapSum)} px` : '保留原始顺序'}${fixedRemoved > 0 ? ` · 固定栏 ${formatNum(fixedRemoved)} px` : ''}${cropSideText}${exportPhotoCount > 0 ? ` · ${exportPhotoCount} 张未裁切` : ''}`;
     els.exportNote.hidden = !plan.downscaled;
     if (plan.downscaled) {
       els.exportNote.textContent = `受浏览器画布上限限制，长图会自动等比缩放到 ${formatNum(plan.width)} × ${formatNum(plan.height)} px。如需更大尺寸，可减少截图数量或降低统一宽度。`;
@@ -2649,7 +2858,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       canvas.height = plan.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('浏览器无法创建画布');
-      drawComposite(canvas, plan.width, plan.height, plan.width / stitch.width);
+      drawComposite(canvas, plan.width, plan.height, plan.width / getOutputWidth());
 
       setLoadingProgress(62, `正在编码 ${format.toUpperCase()} 图片…`);
       await nextFrame();
@@ -3155,6 +3364,17 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.seamLayer.addEventListener('keydown', onSeamKeyDown);
     els.ssClose.addEventListener('click', closeSeamSettings);
     els.ssDone.addEventListener('click', closeSeamSettings);
+    els.edgeCropBtn.addEventListener('click', () => {
+      if (els.edgePanel.hidden) openEdgePanel();
+      else closeEdgePanel();
+    });
+    els.edgeClose.addEventListener('click', closeEdgePanel);
+    els.edgeDone.addEventListener('click', closeEdgePanel);
+    els.edgeAuto.addEventListener('click', restoreEdgeCrop);
+    els.edgeTop.addEventListener('input', () => applyEdgeCrop('top', els.edgeTop.value));
+    els.edgeBottom.addEventListener('input', () => applyEdgeCrop('bottom', els.edgeBottom.value));
+    els.edgeLeft.addEventListener('input', () => applyEdgeCrop('left', els.edgeLeft.value));
+    els.edgeRight.addEventListener('input', () => applyEdgeCrop('right', els.edgeRight.value));
     els.ssTrimBottom.addEventListener('input', () => applySeamBottomTrim(els.ssTrimBottom.value));
     els.ssTrimTop.addEventListener('input', () => applySeamTopTrim(els.ssTrimTop.value));
     els.ssOverlap.addEventListener('input', () => applySeamOverlap(els.ssOverlap.value));
@@ -3243,6 +3463,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         closeResultViewer();
       } else if (!els.seamSettings.hidden) {
         closeSeamSettings();
+      } else if (!els.edgePanel.hidden) {
+        closeEdgePanel();
       } else if (!els.exportModal.hidden) {
         closeExportModal();
       }
