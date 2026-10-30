@@ -301,7 +301,7 @@ img{max-width:100%}
 .long-preview{position:relative;margin:0 auto;border-radius:4px;box-shadow:0 28px 60px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06)}
 .long-preview canvas{display:block;width:100%;height:auto;border-radius:3px;background:#fff}
 #seamLayer{position:absolute;inset:0;pointer-events:none;z-index:3}
-.seam{position:absolute;left:-14px;right:-14px;height:64px;pointer-events:auto;cursor:ns-resize;touch-action:none;border-radius:14px}
+.seam{position:absolute;left:-14px;right:-14px;height:64px;pointer-events:auto;cursor:pointer;touch-action:none;border-radius:14px}
 .seam::before{content:"";position:absolute;inset:3px -2px;border-radius:12px;background:transparent;transition:background .15s;pointer-events:none}
 .seam:hover::before,.seam.active::before{background:rgba(255,205,56,.07)}
 .seam-band{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,205,56,.5);border-bottom:1px dashed rgba(255,205,56,.5);
@@ -312,7 +312,7 @@ img{max-width:100%}
 .seam:hover .seam-line{border-top-color:#ffe887}
 .seam-grip{position:absolute;left:50%;top:32px;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;
   padding:8px 13px;border-radius:999px;background:linear-gradient(180deg,#ffdc62,#ffca27);color:#2a2104;
-  font-size:11.5px;font-weight:800;letter-spacing:-.005em;white-space:nowrap;pointer-events:auto;cursor:ns-resize;touch-action:none;
+  font-size:11.5px;font-weight:800;letter-spacing:-.005em;white-space:nowrap;pointer-events:auto;cursor:pointer;touch-action:none;
   border:1px solid rgba(95,70,0,.2);box-shadow:0 8px 20px -7px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.55);
   transition:transform .15s,box-shadow .15s,background .15s;
 }
@@ -326,8 +326,6 @@ img{max-width:100%}
 .seam.no-overlap .seam-grip{background:#faf8f4;color:#4d465a;cursor:pointer;box-shadow:0 8px 20px -8px rgba(0,0,0,.7),inset 0 1px 0 #fff}
 .seam.no-overlap .seam-grip:hover{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 10px 24px -9px rgba(0,0,0,.8),inset 0 1px 0 #fff}
 .seam.no-overlap .seam-line{border-top-style:dashed;border-top-color:rgba(255,255,255,.4)}
-body.is-seam-dragging{cursor:ns-resize;user-select:none}
-body.is-seam-dragging .seam-grip{cursor:ns-resize}
 .stage-hint{flex:none;height:34px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stage-hint svg{width:14px;height:14px;color:var(--yellow-deep);flex:none}
 .editor-bar{flex:none;width:100%;max-width:1040px;margin:0 auto;padding:7px 22px calc(14px + var(--safe-b));display:flex;align-items:center;justify-content:space-between;gap:16px}
@@ -403,9 +401,11 @@ body.is-seam-dragging .seam-grip{cursor:ns-resize}
 
 .seam{transition:opacity .18s ease}
 #seamLayer.is-adjusting .seam:not(.adjusting){opacity:.3}
+#seamLayer.is-adjusting .seam,
+#seamLayer.is-adjusting .seam-grip{cursor:ns-resize}
 .seam.adjusting .seam-grip{background:linear-gradient(180deg,#8ff0bd,#3fce8a);color:#04331d;
   box-shadow:0 0 0 4px rgba(63,206,138,.22),0 12px 28px -8px rgba(0,0,0,.7)}
-.preview-stage.is-seam-adjusting{cursor:ns-resize}
+.preview-stage.is-seam-adjusting{cursor:ns-resize;touch-action:none}
 .preview-stage.is-seam-adjusting .long-preview{touch-action:none}
 @media (max-width:600px){
   .seam-adjust-bar{bottom:calc(66px + var(--safe-b));width:calc(100% - 18px);gap:9px;padding:8px 9px 8px 11px}
@@ -783,7 +783,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         </div>
         <div class="stage-hint" id="stageHint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>
-          <span id="hintText">点击接缝进入拖动调整，或在面板里精确设置</span>
+          <span id="hintText">点按接缝上下拖动调整裁切，或在面板里精确设置</span>
         </div>
       </div>
       <div class="seam-settings" id="seamSettings" hidden>
@@ -814,7 +814,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         <div class="ss-field">
           <div class="ss-label"><span>接缝位置</span><strong id="ssCutValue">0 px</strong></div>
           <input type="range" id="ssCut" min="0" max="0" value="0" step="1" aria-label="接缝位置">
-          <p class="ss-hint">控制重叠区域里保留多少上一张截图的画面。</p>
+          <p class="ss-hint">控制重叠区域里保留多少上一张截图的画面；重复内容完全一致时影响很小。</p>
         </div>
         <div class="ss-actions">
           <button class="ghost-btn" id="ssAuto" type="button">恢复自动</button>
@@ -862,7 +862,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         </span>
         <div class="sa-copy">
           <strong id="seamAdjustTitle">接缝 2</strong>
-          <span id="seamAdjustText">上下拖动图片调整接缝位置</span>
+          <span id="seamAdjustText">拖动上半/下半图片调整裁切</span>
         </div>
         <div class="sa-actions">
           <button class="ghost-btn" id="seamAdjustPrecise" type="button">精确设置</button>
@@ -1118,7 +1118,6 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     busy: false,
     adding: false,
     dragId: null,
-    seamDrag: null,
     exportFormat: 'png',
     exportQuality: 0.92,
     previewScale: 1,
@@ -2164,15 +2163,11 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       const grip = handle.querySelector('.seam-grip');
       if (grip) {
         const label = grip.querySelector('span');
-        if (label) label.textContent = adjusting ? `确认 · 接缝 ${i + 1}` : `${seam.overlap > 0 ? '接缝' : '设置接缝'} ${i + 1}`;
+        if (label) label.textContent = adjusting ? `确认 · 接缝 ${i + 1}` : `${seam.overlap > 0 ? '接缝' : '直拼'} ${i + 1}`;
         grip.setAttribute('aria-label', adjusting
-          ? `接缝 ${i + 1} 调整中，点按确认当前接缝位置`
-          : (seam.overlap > 0
-            ? `接缝 ${i + 1}，重叠 ${formatNum(seam.overlap)} 像素；点按进入拖动调整`
-            : `接缝 ${i + 1}，暂无重叠；点击打开接缝设置以手动添加重叠`));
-        grip.title = adjusting
-          ? '点按确认当前接缝位置'
-          : (seam.overlap > 0 ? '点按进入拖动调整，再点一次确认' : '点击手动设置重叠区域') + trimHint;
+          ? `接缝 ${i + 1} 调整中，点按确认当前裁切`
+          : `接缝 ${i + 1}，点按上下拖动调整两侧裁切`);
+        grip.title = adjusting ? '点按确认当前裁切' : '点按上下拖动调整两侧裁切，再点一次确认' + trimHint;
       }
       handle.classList.toggle('adjusting', adjusting);
       handle.classList.toggle('low', Boolean(seam.low) && seamAuto);
@@ -2250,10 +2245,10 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     } else if (manualCount) {
       els.hintText.textContent = '已手动调整 · 点击接缝可继续打开设置';
     } else {
-      els.hintText.textContent = '点击接缝进入拖动调整，或在面板里精确设置';
+      els.hintText.textContent = '点按接缝上下拖动调整裁切，或在面板里精确设置';
     }
     if (state.seamAdjustIndex != null) {
-      els.hintText.textContent = '上下拖动图片调整接缝 · 再点一下接缝确认';
+      els.hintText.textContent = '拖动上半或下半图片调整裁切 · 再点一下接缝确认';
     }
   }
 
@@ -2674,13 +2669,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function startSeamAdjust(index) {
     const stitch = state.stitch;
     if (!stitch || index < 0 || index >= stitch.seams.length) return;
-    const seam = stitch.seams[index];
-    if (!seam || seam.overlap <= 0) {
-      // 没有重叠可调，退回精确设置面板
-      finishSeamAdjust();
-      openSeamSettings(index);
-      return;
-    }
+    if (!stitch.seams[index]) return;
     closeSeamSettings();
     closeEdgePanel();
     state.seamAdjustIndex = index;
@@ -2691,7 +2680,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.seamAdjustBar.hidden = false;
     layoutSeams();
     refreshSeamAdjustBar();
-    els.hintText.textContent = '上下拖动图片调整接缝 · 再点一下接缝确认';
+    els.hintText.textContent = '拖动上半或下半图片调整裁切 · 再点一下接缝确认';
     requestAnimationFrame(() => {
       if (state.seamAdjustIndex !== index) return;
       const handle = els.seamLayer.children[index];
@@ -2723,14 +2712,45 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     }
   }
 
+  function getSeamTrimValue(index, side) {
+    const stitch = state.stitch;
+    if (!stitch || !stitch.insets) return 0;
+    const insets = stitch.insets;
+    if (side === 'a') return (insets.bottom && insets.bottom[index]) || 0;
+    return (insets.top && insets.top[index + 1]) || 0;
+  }
+
+  function setSeamTrimValue(index, side, value) {
+    const stitch = state.stitch;
+    if (!stitch || !stitch.insets) return;
+    const insets = stitch.insets;
+    if (side === 'a') {
+      if (insets.bottom) insets.bottom[index] = value;
+    } else if (insets.top) {
+      insets.top[index + 1] = value;
+    }
+  }
+
   function refreshSeamAdjustBar() {
     const stitch = state.stitch;
     const index = state.seamAdjustIndex;
     if (!stitch || index == null) return;
     const seam = stitch.seams[index];
     if (!seam) return;
-    els.seamAdjustTitle.textContent = `接缝 ${index + 1}`;
-    els.seamAdjustText.textContent = `上下拖动图片 · 接缝位置 ${formatNum(seam.cut)} / ${formatNum(seam.overlap)} px`;
+    const bottomA = getSeamTrimValue(index, 'a');
+    const topB = getSeamTrimValue(index, 'b');
+    const baseLabel = seam.overlap > 0 ? `已去重 ${formatNum(seam.overlap)} px` : '原始拼接';
+    els.seamAdjustTitle.textContent = `接缝 ${index + 1} · ${baseLabel}`;
+    els.seamAdjustText.textContent = `上 ${formatNum(bottomA)} / 下 ${formatNum(topB)} px · 向上拖动裁切，向下还原`;
+  }
+
+  // 按落点判断在拖哪一侧：接缝线以上 = 上一张的底部，以下 = 下一张的顶部
+  function getSeamSideFromPoint(index, clientY) {
+    const handle = els.seamLayer.children[index];
+    if (!handle) return 'a';
+    const rect = handle.getBoundingClientRect();
+    const lineY = rect.top + 32;
+    return clientY < lineY ? 'a' : 'b';
   }
 
   function onPreviewSeamPointerDown(event) {
@@ -2740,13 +2760,17 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const seamEl = event.target.closest('.seam');
     if (seamEl && Number(seamEl.dataset.index) !== index) return;
     const stitch = state.stitch;
-    const seam = stitch && stitch.seams[index];
-    if (!seam || seam.overlap <= 0) return;
+    if (!stitch || !stitch.seams[index]) return;
+    const side = getSeamSideFromPoint(index, event.clientY);
+    const bounds = getSeamTrimBounds(index);
     state.suppressSeamClick = false;
     state.seamAdjustDrag = {
       pointerId: event.pointerId,
+      index,
+      side,
       startY: event.clientY,
-      startCut: seam.cut,
+      startTrim: getSeamTrimValue(index, side),
+      maxTrim: side === 'a' ? bounds.bottomA : bounds.topB,
       scale: state.previewScale || 1,
       moved: false
     };
@@ -2760,20 +2784,18 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     if (!drag || event.pointerId !== drag.pointerId) return;
     const stitch = state.stitch;
     const index = state.seamAdjustIndex;
-    if (!stitch || index == null) return;
-    const seam = stitch.seams[index];
-    if (!seam) return;
+    if (!stitch || index == null || !stitch.insets) return;
     if (!drag.moved && Math.abs(event.clientY - drag.startY) > 3) drag.moved = true;
     if (!drag.moved) return;
     event.preventDefault();
     const delta = (event.clientY - drag.startY) / Math.max(0.0001, drag.scale);
-    const nextCut = clamp(Math.round(drag.startCut + delta), 0, seam.overlap);
-    if (nextCut !== seam.cut) {
-      seam.cut = nextCut;
-      computeSegments();
-      schedulePaint();
-      refreshSeamAdjustBar();
-    }
+    // 向上拖动 = 裁掉更多该侧画面；向下拖动 = 还原，最多回到完整图片
+    const next = clamp(Math.round(drag.startTrim - delta), 0, drag.maxTrim);
+    if (next === getSeamTrimValue(drag.index, drag.side)) return;
+    setSeamTrimValue(drag.index, drag.side, next);
+    clampSeamsAroundImage(drag.side === 'a' ? drag.index : drag.index + 1);
+    refreshSeamAdjustBar();
+    scheduleSeamGeometry();
   }
 
   function onPreviewSeamPointerUp(event) {
@@ -2785,12 +2807,14 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     window.removeEventListener('pointercancel', onPreviewSeamPointerUp);
     state.seamAdjustDrag = null;
     if (state.stitch) {
-      computeSegments();
-      paintPreview();
-      updateEditorMeta();
       refreshSeamAdjustBar();
+      scheduleSeamGeometry();
     }
-    if (moved) state.suppressSeamClick = true;
+    if (moved) {
+      // 拖动结束后浏览器还会补发一次 click，屏蔽掉以免误触发「确认」
+      state.suppressSeamClick = true;
+      setTimeout(() => { state.suppressSeamClick = false; }, 350);
+    }
   }
 
   function onSeamClick(event) {
@@ -2806,10 +2830,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       else startSeamAdjust(index);
       return;
     }
-    const stitch = state.stitch;
-    const seam = stitch && stitch.seams[index];
-    if (seam && seam.overlap > 0) startSeamAdjust(index);
-    else openSeamSettings(index);
+    startSeamAdjust(index);
   }
 
   function schedulePaint() {
@@ -2819,93 +2840,6 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       if (!state.stitch) return;
       paintPreview();
     });
-  }
-
-  function onSeamPointerDown(event) {
-    if (state.seamAdjustIndex != null) return;
-    const handle = event.target.closest('.seam');
-    if (!handle) return;
-    const stitch = state.stitch;
-    if (!stitch) return;
-    const index = Number(handle.dataset.index);
-    const seam = stitch.seams[index];
-    if (!seam) return;
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    state.suppressSeamClick = false;
-    if (seam.overlap <= 0) return;
-
-    if (state.activeSeam !== null && state.activeSeam !== index) closeSeamSettings();
-    setSeamActiveClasses(index);
-    state.seamDrag = {
-      index,
-      pointerId: event.pointerId,
-      startY: event.clientY,
-      startCut: seam.cut,
-      scale: state.previewScale || 1,
-      moved: false
-    };
-    document.body.classList.add('is-seam-dragging');
-    window.addEventListener('pointermove', onSeamPointerMove, { passive: false });
-    window.addEventListener('pointerup', onSeamPointerUp);
-    window.addEventListener('pointercancel', onSeamPointerUp);
-  }
-
-  function onSeamPointerMove(event) {
-    const drag = state.seamDrag;
-    if (!drag || event.pointerId !== drag.pointerId) return;
-    const stitch = state.stitch;
-    if (!stitch) return;
-    const seam = stitch.seams[drag.index];
-    if (!seam) return;
-    if (!drag.moved && Math.abs(event.clientY - drag.startY) > 3) drag.moved = true;
-    if (!drag.moved) return;
-    event.preventDefault();
-    const delta = (event.clientY - drag.startY) / Math.max(0.0001, drag.scale);
-    const nextCut = clamp(Math.round(drag.startCut + delta), 0, seam.overlap);
-    if (nextCut !== seam.cut) {
-      seam.cut = nextCut;
-      computeSegments();
-      schedulePaint();
-    }
-  }
-
-  function onSeamPointerUp(event) {
-    const drag = state.seamDrag;
-    if (!drag || event.pointerId !== drag.pointerId) return;
-    const moved = drag.moved;
-    document.body.classList.remove('is-seam-dragging');
-    window.removeEventListener('pointermove', onSeamPointerMove);
-    window.removeEventListener('pointerup', onSeamPointerUp);
-    window.removeEventListener('pointercancel', onSeamPointerUp);
-    state.seamDrag = null;
-    if (state.stitch) {
-      computeSegments();
-      paintPreview();
-      updateEditorMeta();
-      refreshSeamSettings();
-    }
-    if (state.activeSeam == null) setSeamActiveClasses(null);
-    else setSeamActiveClasses(state.activeSeam);
-    if (moved) state.suppressSeamClick = true;
-  }
-
-  function onSeamKeyDown(event) {
-    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
-    const grip = event.target.closest('.seam-grip');
-    if (!grip) return;
-    const stitch = state.stitch;
-    if (!stitch) return;
-    const index = Number(grip.dataset.index);
-    const seam = stitch.seams[index];
-    if (!seam || seam.overlap <= 0) return;
-    event.preventDefault();
-    const step = event.shiftKey ? 10 : 1;
-    seam.cut = clamp(seam.cut + (event.key === 'ArrowDown' ? step : -step), 0, seam.overlap);
-    computeSegments();
-    paintPreview();
-    updateEditorMeta();
-    refreshSeamSettings();
-    refreshSeamAdjustBar();
   }
 
   /* ==========================================================================
@@ -3593,9 +3527,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     });
 
     // seam interactions
-    els.seamLayer.addEventListener('pointerdown', onSeamPointerDown);
     els.seamLayer.addEventListener('click', onSeamClick);
-    els.seamLayer.addEventListener('keydown', onSeamKeyDown);
     els.ssClose.addEventListener('click', closeSeamSettings);
     els.ssDone.addEventListener('click', closeSeamSettings);
     els.edgeCropBtn.addEventListener('click', () => {
