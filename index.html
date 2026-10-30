@@ -6,6 +6,16 @@
 <meta name="theme-color" content="#f3efe7">
 <meta name="color-scheme" content="light">
 <title>缝图 · 长图拼接</title>
+<!-- PWA：可安装到桌面 / 主屏幕，并支持离线使用 -->
+<meta name="description" content="纯前端的长图拼接工具：把多张图片按顺序竖向拼成一张长图，全部在浏览器本地完成，图片不会上传到任何服务器。">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="缝图">
+<link rel="manifest" href="manifest.webmanifest" type="application/manifest+json">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
 <style>
 /* ============ base ============ */
 :root{
@@ -3065,6 +3075,14 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   bindEvents();
   updateHomeUI();
 })();
+</script>
+<script>
+  /* PWA：注册 Service Worker（离线可用）。file:// 直接打开时注册会失败，已静默忽略 */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
