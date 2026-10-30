@@ -372,6 +372,48 @@ body.is-seam-dragging .seam-grip{cursor:ns-resize}
   .ss-actions{margin-top:11px}
 }
 
+/* 拖动滑杆时让面板淡出，露出下方预览 */
+.seam-settings{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+.seam-settings.is-adjusting{background:rgba(18,12,38,.05);border-color:rgba(255,255,255,.16);box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.seam-settings.is-adjusting .ss-head,
+.seam-settings.is-adjusting .ss-actions,
+.seam-settings.is-adjusting .ss-field:not(.is-active){opacity:0;pointer-events:none;transition:opacity .12s ease}
+.seam-settings.is-adjusting .ss-field.is-active{background:rgba(255,253,249,.96);border-radius:12px;
+  box-shadow:0 0 0 10px rgba(255,253,249,.96),0 14px 30px -18px rgba(18,12,38,.6)}
+
+/* 接缝调整模式：拖动图片移动接缝 */
+.seam-adjust-bar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(74px + var(--safe-b));z-index:27;
+  display:flex;align-items:center;gap:11px;width:min(540px,calc(100% - 24px));padding:9px 10px 9px 13px;border-radius:18px;
+  background:rgba(255,253,249,.97);border:1px solid rgba(35,28,55,.11);
+  -webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);
+  box-shadow:0 22px 50px -24px rgba(18,12,38,.6),inset 0 1px 0 #fff;
+  animation:seamBarIn .2s cubic-bezier(.16,.84,.24,1) both;
+}
+@keyframes seamBarIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.sa-icon{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff;
+  background:linear-gradient(145deg,#8a6bff,#5938e8);box-shadow:0 8px 18px -10px rgba(83,50,224,.9)}
+.sa-icon svg{width:16px;height:16px}
+.sa-copy{min-width:0;flex:1}
+.sa-copy strong{display:block;font-size:12.5px;font-weight:800;letter-spacing:-.01em}
+.sa-copy span{display:block;margin-top:1px;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sa-actions{display:flex;align-items:center;gap:6px;flex:none}
+.sa-actions .ghost-btn{padding:8px 12px;font-size:11.5px}
+.sa-actions .primary-btn{padding:9px 16px;font-size:12px;border-radius:11px}
+
+.seam{transition:opacity .18s ease}
+#seamLayer.is-adjusting .seam:not(.adjusting){opacity:.3}
+.seam.adjusting .seam-grip{background:linear-gradient(180deg,#8ff0bd,#3fce8a);color:#04331d;
+  box-shadow:0 0 0 4px rgba(63,206,138,.22),0 12px 28px -8px rgba(0,0,0,.7)}
+.preview-stage.is-seam-adjusting{cursor:ns-resize}
+.preview-stage.is-seam-adjusting .long-preview{touch-action:none}
+@media (max-width:600px){
+  .seam-adjust-bar{bottom:calc(66px + var(--safe-b));width:calc(100% - 18px);gap:9px;padding:8px 9px 8px 11px}
+  .sa-copy span{font-size:10px}
+  .sa-actions .ghost-btn{padding:7px 10px;font-size:11px}
+  .sa-actions .primary-btn{padding:8px 13px;font-size:11.5px}
+}
+
 /* ============ export result viewer ============ */
 .result-modal{position:fixed;inset:0;z-index:90;background:#0d0b12}
 .result-shell{height:100vh;height:100dvh;display:flex;flex-direction:column;background:#15121d;color:#fff;animation:fadeIn .22s ease both}
@@ -741,7 +783,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         </div>
         <div class="stage-hint" id="stageHint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>
-          <span id="hintText">拖动黄色接缝线微调，点击接缝可调裁切与重叠</span>
+          <span id="hintText">点击接缝进入拖动调整，或在面板里精确设置</span>
         </div>
       </div>
       <div class="seam-settings" id="seamSettings" hidden>
@@ -812,6 +854,19 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         <div class="ss-actions">
           <button class="ghost-btn" id="edgeAuto" type="button">恢复自动</button>
           <button class="primary-btn" id="edgeDone" type="button">完成</button>
+        </div>
+      </div>
+      <div class="seam-adjust-bar" id="seamAdjustBar" hidden>
+        <span class="sa-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 17h8"/><path d="M12 4v5m0 6v5"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5"/></svg>
+        </span>
+        <div class="sa-copy">
+          <strong id="seamAdjustTitle">接缝 2</strong>
+          <span id="seamAdjustText">上下拖动图片调整接缝位置</span>
+        </div>
+        <div class="sa-actions">
+          <button class="ghost-btn" id="seamAdjustPrecise" type="button">精确设置</button>
+          <button class="primary-btn" id="seamAdjustDone" type="button">确认</button>
         </div>
       </div>
       <div class="editor-bar">
@@ -1015,6 +1070,11 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     edgeRight: document.getElementById('edgeRight'),
     edgeRightValue: document.getElementById('edgeRightValue'),
     edgeRightHint: document.getElementById('edgeRightHint'),
+    seamAdjustBar: document.getElementById('seamAdjustBar'),
+    seamAdjustTitle: document.getElementById('seamAdjustTitle'),
+    seamAdjustText: document.getElementById('seamAdjustText'),
+    seamAdjustPrecise: document.getElementById('seamAdjustPrecise'),
+    seamAdjustDone: document.getElementById('seamAdjustDone'),
 
     fileInput: document.getElementById('fileInput'),
     exportModal: document.getElementById('exportModal'),
@@ -1070,6 +1130,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     suppressSeamClick: false,
     seamGeometryRaf: 0,
     edgeGeometryRaf: 0,
+    seamAdjustIndex: null,
+    seamAdjustDrag: null,
+    adjustingPanel: null,
     resultUrl: null,
     resultBlob: null,
     resultFilename: '',
@@ -1938,6 +2001,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
   function showHome() {
     if (state.busy) return;
+    finishSeamAdjust();
     closeSeamSettings();
     closeEdgePanel();
     closeExportModal();
@@ -2096,15 +2160,21 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
       const seamAuto = isSeamAuto(i);
       const trimHint = seamAuto ? '' : '（含手动裁切）';
+      const adjusting = state.seamAdjustIndex === i;
       const grip = handle.querySelector('.seam-grip');
       if (grip) {
         const label = grip.querySelector('span');
-        if (label) label.textContent = `${seam.overlap > 0 ? '接缝' : '设置接缝'} ${i + 1}`;
-        grip.setAttribute('aria-label', seam.overlap > 0
-          ? `接缝 ${i + 1}，重叠 ${formatNum(seam.overlap)} 像素；拖动微调，点击打开接缝设置`
-          : `接缝 ${i + 1}，暂无重叠；点击打开接缝设置以手动添加重叠`);
-        grip.title = (seam.overlap > 0 ? '拖动微调；点击打开接缝设置' : '点击手动设置重叠区域') + trimHint;
+        if (label) label.textContent = adjusting ? `确认 · 接缝 ${i + 1}` : `${seam.overlap > 0 ? '接缝' : '设置接缝'} ${i + 1}`;
+        grip.setAttribute('aria-label', adjusting
+          ? `接缝 ${i + 1} 调整中，点按确认当前接缝位置`
+          : (seam.overlap > 0
+            ? `接缝 ${i + 1}，重叠 ${formatNum(seam.overlap)} 像素；点按进入拖动调整`
+            : `接缝 ${i + 1}，暂无重叠；点击打开接缝设置以手动添加重叠`));
+        grip.title = adjusting
+          ? '点按确认当前接缝位置'
+          : (seam.overlap > 0 ? '点按进入拖动调整，再点一次确认' : '点击手动设置重叠区域') + trimHint;
       }
+      handle.classList.toggle('adjusting', adjusting);
       handle.classList.toggle('low', Boolean(seam.low) && seamAuto);
       handle.classList.toggle('no-overlap', seam.overlap <= 0);
     }
@@ -2180,7 +2250,10 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     } else if (manualCount) {
       els.hintText.textContent = '已手动调整 · 点击接缝可继续打开设置';
     } else {
-      els.hintText.textContent = '拖动黄色接缝线微调，点击接缝可调裁切与重叠';
+      els.hintText.textContent = '点击接缝进入拖动调整，或在面板里精确设置';
+    }
+    if (state.seamAdjustIndex != null) {
+      els.hintText.textContent = '上下拖动图片调整接缝 · 再点一下接缝确认';
     }
   }
 
@@ -2218,6 +2291,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     fitPreview();
     updateEditorMeta();
     refreshSeamSettings();
+    refreshSeamAdjustBar();
     showToast('已恢复自动接缝', 'success');
   }
 
@@ -2329,6 +2403,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function openSeamSettings(index) {
     const stitch = state.stitch;
     if (!stitch || index < 0 || index >= stitch.seams.length) return;
+    finishSeamAdjust();
     closeEdgePanel();
     state.activeSeam = index;
     setSeamActiveClasses(index);
@@ -2351,6 +2426,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
   function closeSeamSettings() {
     if (!els.seamSettings) return;
+    endPanelAdjust(els.seamSettings);
     els.seamSettings.hidden = true;
     state.activeSeam = null;
     setSeamActiveClasses(null);
@@ -2561,6 +2637,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
   function openEdgePanel() {
     if (!state.stitch) return;
+    finishSeamAdjust();
     closeSeamSettings();
     refreshEdgePanel();
     els.edgePanel.hidden = false;
@@ -2568,7 +2645,152 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
   function closeEdgePanel() {
     if (!els.edgePanel) return;
+    endPanelAdjust(els.edgePanel);
     els.edgePanel.hidden = true;
+  }
+
+  // 拖动面板里的滑杆时，让面板淡出、只留当前滑杆，露出下方预览
+  function beginPanelAdjust(panel, input) {
+    if (!panel || !input) return;
+    state.adjustingPanel = panel;
+    panel.classList.add('is-adjusting');
+    panel.querySelectorAll('.ss-field').forEach((field) => {
+      field.classList.toggle('is-active', field.contains(input));
+    });
+  }
+
+  function endPanelAdjust(panel) {
+    const active = state.adjustingPanel;
+    if (!active) return;
+    if (panel && panel !== active) return;
+    state.adjustingPanel = null;
+    active.classList.remove('is-adjusting');
+    active.querySelectorAll('.ss-field').forEach((field) => field.classList.remove('is-active'));
+  }
+
+  /* ==========================================================================
+     Seam adjust mode：点接缝进入调整，上下拖动图片移动接缝，再点接缝确认
+     ========================================================================== */
+  function startSeamAdjust(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return;
+    const seam = stitch.seams[index];
+    if (!seam || seam.overlap <= 0) {
+      // 没有重叠可调，退回精确设置面板
+      finishSeamAdjust();
+      openSeamSettings(index);
+      return;
+    }
+    closeSeamSettings();
+    closeEdgePanel();
+    state.seamAdjustIndex = index;
+    state.suppressSeamClick = false;
+    setSeamActiveClasses(index);
+    els.seamLayer.classList.add('is-adjusting');
+    els.previewStage.classList.add('is-seam-adjusting');
+    els.seamAdjustBar.hidden = false;
+    layoutSeams();
+    refreshSeamAdjustBar();
+    els.hintText.textContent = '上下拖动图片调整接缝 · 再点一下接缝确认';
+    requestAnimationFrame(() => {
+      if (state.seamAdjustIndex !== index) return;
+      const handle = els.seamLayer.children[index];
+      if (!handle) return;
+      const stageRect = els.previewStage.getBoundingClientRect();
+      const handleRect = handle.getBoundingClientRect();
+      const barRect = els.seamAdjustBar.getBoundingClientRect();
+      const safeTop = stageRect.top + 74;
+      const safeBottom = Math.min(stageRect.bottom, barRect.top) - 24;
+      if (handleRect.top < safeTop || handleRect.bottom > safeBottom) {
+        els.previewStage.scrollTop += handleRect.top - stageRect.top - Math.max(90, els.previewStage.clientHeight * 0.3);
+      }
+    });
+  }
+
+  function finishSeamAdjust() {
+    if (state.seamAdjustIndex == null) return;
+    state.seamAdjustIndex = null;
+    state.seamAdjustDrag = null;
+    els.seamLayer.classList.remove('is-adjusting');
+    els.previewStage.classList.remove('is-seam-adjusting');
+    if (els.seamAdjustBar) els.seamAdjustBar.hidden = true;
+    setSeamActiveClasses(null);
+    if (state.stitch) {
+      computeSegments();
+      paintPreview();
+      updateEditorMeta();
+      refreshSeamSettings();
+    }
+  }
+
+  function refreshSeamAdjustBar() {
+    const stitch = state.stitch;
+    const index = state.seamAdjustIndex;
+    if (!stitch || index == null) return;
+    const seam = stitch.seams[index];
+    if (!seam) return;
+    els.seamAdjustTitle.textContent = `接缝 ${index + 1}`;
+    els.seamAdjustText.textContent = `上下拖动图片 · 接缝位置 ${formatNum(seam.cut)} / ${formatNum(seam.overlap)} px`;
+  }
+
+  function onPreviewSeamPointerDown(event) {
+    const index = state.seamAdjustIndex;
+    if (index == null) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const seamEl = event.target.closest('.seam');
+    if (seamEl && Number(seamEl.dataset.index) !== index) return;
+    const stitch = state.stitch;
+    const seam = stitch && stitch.seams[index];
+    if (!seam || seam.overlap <= 0) return;
+    state.suppressSeamClick = false;
+    state.seamAdjustDrag = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startCut: seam.cut,
+      scale: state.previewScale || 1,
+      moved: false
+    };
+    window.addEventListener('pointermove', onPreviewSeamPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPreviewSeamPointerUp);
+    window.addEventListener('pointercancel', onPreviewSeamPointerUp);
+  }
+
+  function onPreviewSeamPointerMove(event) {
+    const drag = state.seamAdjustDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const stitch = state.stitch;
+    const index = state.seamAdjustIndex;
+    if (!stitch || index == null) return;
+    const seam = stitch.seams[index];
+    if (!seam) return;
+    if (!drag.moved && Math.abs(event.clientY - drag.startY) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    event.preventDefault();
+    const delta = (event.clientY - drag.startY) / Math.max(0.0001, drag.scale);
+    const nextCut = clamp(Math.round(drag.startCut + delta), 0, seam.overlap);
+    if (nextCut !== seam.cut) {
+      seam.cut = nextCut;
+      computeSegments();
+      schedulePaint();
+      refreshSeamAdjustBar();
+    }
+  }
+
+  function onPreviewSeamPointerUp(event) {
+    const drag = state.seamAdjustDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const moved = drag.moved;
+    window.removeEventListener('pointermove', onPreviewSeamPointerMove);
+    window.removeEventListener('pointerup', onPreviewSeamPointerUp);
+    window.removeEventListener('pointercancel', onPreviewSeamPointerUp);
+    state.seamAdjustDrag = null;
+    if (state.stitch) {
+      computeSegments();
+      paintPreview();
+      updateEditorMeta();
+      refreshSeamAdjustBar();
+    }
+    if (moved) state.suppressSeamClick = true;
   }
 
   function onSeamClick(event) {
@@ -2578,7 +2800,16 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       state.suppressSeamClick = false;
       return;
     }
-    openSeamSettings(Number(handle.dataset.index));
+    const index = Number(handle.dataset.index);
+    if (state.seamAdjustIndex != null) {
+      if (state.seamAdjustIndex === index) finishSeamAdjust();
+      else startSeamAdjust(index);
+      return;
+    }
+    const stitch = state.stitch;
+    const seam = stitch && stitch.seams[index];
+    if (seam && seam.overlap > 0) startSeamAdjust(index);
+    else openSeamSettings(index);
   }
 
   function schedulePaint() {
@@ -2591,6 +2822,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   }
 
   function onSeamPointerDown(event) {
+    if (state.seamAdjustIndex != null) return;
     const handle = event.target.closest('.seam');
     if (!handle) return;
     const stitch = state.stitch;
@@ -2673,6 +2905,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     paintPreview();
     updateEditorMeta();
     refreshSeamSettings();
+    refreshSeamAdjustBar();
   }
 
   /* ==========================================================================
@@ -2704,6 +2937,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function openExportModal() {
     const stitch = state.stitch;
     if (!stitch || state.screen !== 'editor' || state.busy) return;
+    finishSeamAdjust();
     closeSeamSettings();
     const plan = computeExportPlan();
     const overlapSum = stitch.seams.reduce((sum, seam) => sum + seam.overlap, 0);
@@ -3380,6 +3614,25 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.ssOverlap.addEventListener('input', () => applySeamOverlap(els.ssOverlap.value));
     els.ssCut.addEventListener('input', () => applySeamCut(els.ssCut.value));
     els.ssAuto.addEventListener('click', restoreActiveSeam);
+    els.seamAdjustDone.addEventListener('click', finishSeamAdjust);
+    els.seamAdjustPrecise.addEventListener('click', () => {
+      const index = state.seamAdjustIndex;
+      if (index == null) return;
+      finishSeamAdjust();
+      openSeamSettings(index);
+    });
+    els.previewStage.addEventListener('pointerdown', onPreviewSeamPointerDown);
+    [els.seamSettings, els.edgePanel].forEach((panel) => {
+      if (!panel) return;
+      panel.querySelectorAll('input[type="range"]').forEach((input) => {
+        input.addEventListener('pointerdown', () => beginPanelAdjust(panel, input));
+        input.addEventListener('keydown', () => beginPanelAdjust(panel, input));
+        input.addEventListener('keyup', () => endPanelAdjust(panel));
+        input.addEventListener('blur', () => endPanelAdjust(panel));
+      });
+    });
+    window.addEventListener('pointerup', () => endPanelAdjust());
+    window.addEventListener('pointercancel', () => endPanelAdjust());
 
     // export sheet
     els.closeExport.addEventListener('click', closeExportModal);
@@ -3465,6 +3718,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         closeSeamSettings();
       } else if (!els.edgePanel.hidden) {
         closeEdgePanel();
+      } else if (state.seamAdjustIndex != null) {
+        finishSeamAdjust();
       } else if (!els.exportModal.hidden) {
         closeExportModal();
       }
