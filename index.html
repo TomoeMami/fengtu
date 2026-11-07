@@ -996,6 +996,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   const MAX_EXPORT_AREA = 40000000;
   const MAX_PREVIEW_PIXEL_HEIGHT = 16000;
   const IMAGE_ERROR = '图片读取失败';
+  // 手动裁切上限：同一张图「上 + 下」或「左 + 右」最多裁掉 90%，
+  // 也就是无论怎么拖、怎么拉，每张图都至少留下 10% 的画面。
+  const MAX_MANUAL_CROP_RATIO = 0.9;
 
   const els = {
     brandHome: document.getElementById('brandHome'),
@@ -1940,6 +1943,9 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
   function computeSegments() {
     const stitch = state.stitch;
     if (!stitch) return;
+    // 单一收口点：每次重算前先执行 10% 底线不变量，
+    // 这样不论裁切值从哪条路径被改动，成品里都不会出现「某张图被裁没」。
+    enforceCropFloor();
     const count = stitch.heights.length;
     const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : null;
     const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : null;
@@ -2306,25 +2312,127 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     return bottomA === autoBottomA && topB === autoTopB;
   }
 
-  // 裁切量的可调上限：单边最多 45%，两张图各自至少保留 10% 内容。
+  // 单张图的手动裁切预算：上下（或左右）合计最多裁掉 90%，至少保留 10% 画面。
+  function cropBudget(size) {
+    return Math.max(0, Math.floor((Number(size) || 0) * MAX_MANUAL_CROP_RATIO));
+  }
+
+  // 一张图至少要留下的画面尺寸（10%）
+  function minVisibleHeight(size) {
+    return Math.max(1, Math.ceil((Number(size) || 0) * (1 - MAX_MANUAL_CROP_RATIO)));
+  }
+
+  // 把每张图在成品里的「起点 / 末尾损失」拆开，和 computeSegments 用同一套公式：
+  //   visible(i) = H - start(i) - endLoss(i)
+  // 其中 start(i)：首图 = 顶部裁切，其余 = 顶部固定栏裁切 + 上一条接缝的 cut
+  //      endLoss(i)：末图 = 底部裁切，其余 = 底部固定栏裁切 + (重叠 - cut)
+  // 只有和绘制逻辑同源，10% 下限才真的兜得住。
+  function getSegmentStart(stitch, index) {
+    const H = stitch.heights[index] || 0;
+    if (index === 0) return Math.max(0, Math.round((stitch.edges || {}).top || 0));
+    const insets = stitch.insets || {};
+    const topInset = (insets.top && insets.top[index]) || 0;
+    const prevSeam = stitch.seams[index - 1];
+    return clamp(topInset + (prevSeam ? prevSeam.cut || 0 : 0), 0, H);
+  }
+
+  function getSegmentEndLoss(stitch, index) {
+    const count = stitch.heights.length;
+    const H = stitch.heights[index] || 0;
+    if (index === count - 1) return Math.max(0, Math.round((stitch.edges || {}).bottom || 0));
+    const insets = stitch.insets || {};
+    const bottomInset = (insets.bottom && insets.bottom[index]) || 0;
+    const seam = stitch.seams[index];
+    const consumed = seam ? (seam.overlap || 0) - (seam.cut || 0) : 0;
+    return clamp(bottomInset + consumed, 0, H);
+  }
+
+  // 这张图在成品里实际还剩多少高度
+  function getImageVisibleHeight(stitch, index) {
+    if (!stitch) return 0;
+    const H = stitch.heights[index] || 0;
+    return Math.max(0, H - getSegmentStart(stitch, index) - getSegmentEndLoss(stitch, index));
+  }
+
+  // 起点最多能到多少（再多就会裁穿这张图）
+  function getMaxSegmentStart(stitch, index) {
+    const H = stitch.heights[index] || 0;
+    return Math.max(0, H - getSegmentEndLoss(stitch, index) - minVisibleHeight(H));
+  }
+
+  // 末尾最多能损失多少
+  function getMaxSegmentEndLoss(stitch, index) {
+    const H = stitch.heights[index] || 0;
+    return Math.max(0, H - getSegmentStart(stitch, index) - minVisibleHeight(H));
+  }
+
+  // 这张图还能再被裁掉多少高度（保证裁完后仍留 10%）
+  function cropHeadroom(stitch, index) {
+    if (!stitch) return 0;
+    const H = stitch.heights[index] || 0;
+    return Math.max(0, getImageVisibleHeight(stitch, index) - minVisibleHeight(H));
+  }
+
+  // 接缝两侧裁切的可调上限：单边最多到整图的 90%（原来的 45% 的两倍），
+  // 且同一张图上下合计不超过 90%，也就是怎么拖都至少留下 10% 画面。
   function getSeamTrimBounds(index) {
     const stitch = state.stitch;
     if (!stitch || index < 0 || index >= stitch.seams.length) return { bottomA: 0, topB: 0 };
+    const seam = stitch.seams[index];
+    const cut = Math.max(0, (seam && seam.cut) || 0);
+    const consumed = Math.max(0, (seam && seam.overlap || 0) - cut);
     const hA = stitch.heights[index] || 0;
     const hB = stitch.heights[index + 1] || 0;
+    // 上一张底部裁切上限：末尾损失还能再增加多少（剔除接缝已经吃掉的部分），且不超过 90% 预算
+    const bottomA = Math.min(
+      cropBudget(hA),
+      getMaxSegmentEndLoss(stitch, index) - consumed
+    );
+    // 下一张顶部裁切上限：起点还能上移多少（剔除接缝 cut 已经吃掉的部分），且不超过 90% 预算
+    const topB = Math.min(
+      cropBudget(hB),
+      getMaxSegmentStart(stitch, index + 1) - cut
+    );
     return {
-      bottomA: Math.max(0, Math.floor(hA * 0.45)),
-      topB: Math.max(0, Math.floor(hB * 0.45))
+      bottomA: Math.max(0, Math.round(bottomA)),
+      topB: Math.max(0, Math.round(topB))
     };
+  }
+
+  // 接缝重叠的可用上限。重叠只会吃掉上一张的底部，所以最多能在
+  // 当前基础上再吃掉「上一张剩余可见高度 - 10%」。
+  function getSeamMaxOverlap(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return 0;
+    const seam = stitch.seams[index];
+    if (!seam) return 0;
+    const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
+    const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
+    const contentA = (stitch.heights[index] || 0) - (topInsets[index] || 0) - (bottomInsets[index] || 0);
+    const contentB = (stitch.heights[index + 1] || 0) - (topInsets[index + 1] || 0) - (bottomInsets[index + 1] || 0);
+    // overlap - cut 属于「上一张的末尾损失」
+    const maxConsumed = getMaxSegmentEndLoss(stitch, index) - ((stitch.insets.bottom && stitch.insets.bottom[index]) || 0);
+    return Math.max(0, Math.min(contentA, contentB, maxConsumed + (seam.cut || 0)));
+  }
+
+  // 「接缝位置」cut 越大，下一张顶部被吃掉越多，
+  // 所以上限由下一张「起点还能上移多少」决定。
+  function getSeamCutMax(index) {
+    const stitch = state.stitch;
+    if (!stitch || index < 0 || index >= stitch.seams.length) return 0;
+    const seam = stitch.seams[index];
+    if (!seam) return 0;
+    const topInsetB = (stitch.insets.top && stitch.insets.top[index + 1]) || 0;
+    const maxCut = getMaxSegmentStart(stitch, index + 1) - topInsetB;
+    return Math.max(0, Math.min(seam.overlap || 0, maxCut));
   }
 
   function clampSeamToInsets(index) {
     const stitch = state.stitch;
     if (!stitch || index < 0 || index >= stitch.seams.length) return;
-    const maxOverlap = getSeamMaxOverlap(index);
     const seam = stitch.seams[index];
-    if (seam.overlap > maxOverlap) seam.overlap = maxOverlap;
-    seam.cut = clamp(seam.cut, 0, seam.overlap);
+    if (seam.overlap > getSeamMaxOverlap(index)) seam.overlap = getSeamMaxOverlap(index);
+    seam.cut = clamp(seam.cut, 0, getSeamCutMax(index));
   }
 
   // 图片 k 的上下裁切量变化后，seam k-1（作为下一张）与 seam k（作为上一张）的可用重叠都会变
@@ -2333,14 +2441,84 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     clampSeamToInsets(k);
   }
 
-  function getSeamMaxOverlap(index) {
+  // 兜底不变量：无论从哪个入口（接缝滑杆 / 拖动 / 边缘裁切 / 重叠）改动，
+  // 都把越界的值收回到「绝对上限」以内，保证每张图在成品里至少露出 10%。
+  // 返回是否真的修正过，调用方可据此刷新界面。
+  function enforceCropFloor() {
     const stitch = state.stitch;
-    if (!stitch || index < 0 || index >= stitch.seams.length) return 0;
-    const topInsets = stitch.insets && stitch.insets.top ? stitch.insets.top : [];
-    const bottomInsets = stitch.insets && stitch.insets.bottom ? stitch.insets.bottom : [];
-    const heightA = (stitch.heights[index] || 0) - (topInsets[index] || 0) - (bottomInsets[index] || 0);
-    const heightB = (stitch.heights[index + 1] || 0) - (topInsets[index + 1] || 0) - (bottomInsets[index + 1] || 0);
-    return Math.max(0, Math.min(heightA, heightB));
+    if (!stitch || !stitch.insets || !stitch.edges) return false;
+    let changed = false;
+    const setVal = (obj, key, value) => {
+      const next = Math.max(0, Math.round(value));
+      if (Math.round(obj[key] || 0) !== next) {
+        obj[key] = next;
+        changed = true;
+      }
+    };
+    const lastIndex = stitch.heights.length - 1;
+
+    // 多轮迭代：各侧上限彼此依赖，收敛到稳定状态为止（最多 6 轮兜底）
+    for (let pass = 0; pass < 6; pass += 1) {
+      const before = changed;
+      // 左右：合计不超过 90%，即始终保留 10% 宽度
+      const widthBudget = cropBudget(stitch.width);
+      const left = Math.max(0, Math.round(stitch.edges.left || 0));
+      const right = Math.max(0, Math.round(stitch.edges.right || 0));
+      if (left + right > widthBudget) {
+        if (right <= 0) {
+          setVal(stitch.edges, 'left', widthBudget);
+        } else if (left <= 0) {
+          setVal(stitch.edges, 'right', widthBudget);
+        } else {
+          const ratio = widthBudget / (left + right);
+          setVal(stitch.edges, 'left', Math.floor(left * ratio));
+          setVal(stitch.edges, 'right', Math.floor(right * ratio));
+        }
+      }
+
+      // 首图顶部 / 末图底部：绝对上限 + 90% 预算
+      setVal(stitch.edges, 'top', Math.min(
+        Math.min(stitch.edges.top || 0, cropBudget(stitch.heights[0] || 0)),
+        getMaxSegmentStart(stitch, 0)
+      ));
+      setVal(stitch.edges, 'bottom', Math.min(
+        Math.min(stitch.edges.bottom || 0, cropBudget(stitch.heights[lastIndex] || 0)),
+        getMaxSegmentEndLoss(stitch, lastIndex)
+      ));
+
+      // 接缝里的手动裁切量（只在非首末的顶部/底部生效）
+      for (let i = 0; i < stitch.seams.length; i += 1) {
+        const seam = stitch.seams[i];
+        // 上一张底部裁切
+        if (stitch.insets.bottom) {
+          const current = stitch.insets.bottom[i] || 0;
+          const consumed = Math.max(0, (seam.overlap || 0) - (seam.cut || 0));
+          const cap = Math.min(
+            Math.min(current, cropBudget(stitch.heights[i] || 0)),
+            getMaxSegmentEndLoss(stitch, i) - consumed
+          );
+          setVal(stitch.insets.bottom, i, cap);
+        }
+        // 下一张顶部裁切
+        if (stitch.insets.top) {
+          const current = stitch.insets.top[i + 1] || 0;
+          const cap = Math.min(
+            Math.min(current, cropBudget(stitch.heights[i + 1] || 0)),
+            getMaxSegmentStart(stitch, i + 1) - (seam.cut || 0)
+          );
+          setVal(stitch.insets.top, i + 1, cap);
+        }
+        // 接缝位置与重叠
+        setVal(seam, 'cut', Math.min(seam.cut || 0, getSeamCutMax(i)));
+        setVal(seam, 'overlap', Math.min(
+          Math.min(seam.overlap || 0, getSeamMaxOverlap(i)),
+          getMaxSegmentEndLoss(stitch, i)
+        ));
+        if ((seam.cut || 0) > (seam.overlap || 0)) setVal(seam, 'cut', seam.overlap || 0);
+      }
+      if (!changed && pass > 0 && before === changed) break;
+    }
+    return changed;
   }
 
   function setSeamActiveClasses(index) {
@@ -2373,22 +2551,22 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     els.ssTrimBottom.disabled = bounds.bottomA <= 0;
     els.ssTrimBottomValue.textContent = `${formatNum(bottomA)} px`;
     els.ssTrimBottomHint.textContent = autoBottomA > 0
-      ? `自动识别 ${formatNum(autoBottomA)} px · 设为 0 可保留上一张底部完整画面`
-      : '未检测到底部固定栏 · 可按需手动裁切上一张底部';
+      ? `自动识别 ${formatNum(autoBottomA)} px · 最多可裁到 ${formatNum(bounds.bottomA)} px（至少保留 10% 画面）`
+      : `最多可裁到 ${formatNum(bounds.bottomA)} px · 至少保留 10% 画面`;
 
     els.ssTrimTop.max = String(Math.max(1, bounds.topB));
     els.ssTrimTop.value = String(topB);
     els.ssTrimTop.disabled = bounds.topB <= 0;
     els.ssTrimTopValue.textContent = `${formatNum(topB)} px`;
     els.ssTrimTopHint.textContent = autoTopB > 0
-      ? `自动识别 ${formatNum(autoTopB)} px · 设为 0 可保留下一张顶部完整画面`
-      : '未检测到顶部固定栏 · 可按需手动裁切下一张顶部';
+      ? `自动识别 ${formatNum(autoTopB)} px · 最多可裁到 ${formatNum(bounds.topB)} px（至少保留 10% 画面）`
+      : `最多可裁到 ${formatNum(bounds.topB)} px · 至少保留 10% 画面`;
 
     els.ssOverlap.max = String(Math.max(1, maxOverlap));
     els.ssOverlap.value = String(seam.overlap);
     els.ssOverlap.disabled = maxOverlap <= 0;
     els.ssOverlapValue.textContent = `${formatNum(seam.overlap)} px`;
-    els.ssCut.max = String(Math.max(0, seam.overlap));
+    els.ssCut.max = String(Math.max(0, getSeamCutMax(index)));
     els.ssCut.value = String(seam.cut);
     els.ssCut.disabled = seam.overlap <= 0;
     els.ssCutValue.textContent = `${formatNum(seam.cut)} px`;
@@ -2478,7 +2656,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const index = state.activeSeam;
     if (!stitch || index == null || index < 0 || index >= stitch.seams.length) return;
     const seam = stitch.seams[index];
-    seam.cut = clamp(Math.round(Number(value) || 0), 0, seam.overlap);
+    seam.cut = clamp(Math.round(Number(value) || 0), 0, getSeamCutMax(index));
     computeSegments();
     schedulePaint();
     updateEditorMeta();
@@ -2548,11 +2726,22 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     const stitch = state.stitch;
     if (!stitch) return { top: 0, bottom: 0, left: 0, right: 0 };
     const n = stitch.heights.length;
+    const edges = stitch.edges || { top: 0, bottom: 0, left: 0, right: 0 };
+    const W = stitch.width || 0;
+    const currentTop = Math.max(0, Math.round(edges.top || 0));
+    const currentBottom = Math.max(0, Math.round(edges.bottom || 0));
+    const currentLeft = Math.max(0, Math.round(edges.left || 0));
+    const currentRight = Math.max(0, Math.round(edges.right || 0));
+    // 上限 = 当前值 + 这张图还能再裁的部分，即最多到 90%、
+    // 且无论怎么拉，首图顶部 / 末图底部都至少留 10%。
+    const visibleWidth = W - currentLeft - currentRight;
     return {
-      top: Math.max(0, Math.floor((stitch.heights[0] || 0) * 0.45)),
-      bottom: Math.max(0, Math.floor((stitch.heights[n - 1] || 0) * 0.45)),
-      left: Math.max(0, Math.floor(stitch.width * 0.45)),
-      right: Math.max(0, Math.floor(stitch.width * 0.45))
+      top: Math.max(0, Math.min(cropBudget(stitch.heights[0] || 0),
+        currentTop + cropHeadroom(stitch, 0))),
+      bottom: Math.max(0, Math.min(cropBudget(stitch.heights[n - 1] || 0),
+        currentBottom + cropHeadroom(stitch, n - 1))),
+      left: Math.max(0, currentLeft + Math.max(0, visibleWidth - minVisibleHeight(W))),
+      right: Math.max(0, currentRight + Math.max(0, visibleWidth - minVisibleHeight(W)))
     };
   }
 
@@ -2575,8 +2764,8 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       row.input.value = String(value);
       row.value.textContent = `${formatNum(value)} px`;
       row.hint.textContent = autoValue > 0
-        ? `${row.label} · 自动识别 ${formatNum(autoValue)} px`
-        : `${row.label} · 拖动调整裁切量`;
+        ? `${row.label} · 自动识别 ${formatNum(autoValue)} px · 最多 ${formatNum(bounds[row.side] || 0)} px（保留 10%）`
+        : `${row.label} · 最多 ${formatNum(bounds[row.side] || 0)} px（保留 10% 画面）`;
     });
     els.edgeSub.textContent = `输出 ${formatNum(getOutputWidth())} × ${formatNum(stitch.totalHeight)} px`;
   }
@@ -2789,6 +2978,10 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     if (!drag.moved) return;
     event.preventDefault();
     const delta = (event.clientY - drag.startY) / Math.max(0.0001, drag.scale);
+    // 上限按「当前」状态实时重算：裁切会连带改变接缝重叠，
+    // 用按下时的旧上限会让一次拖动够不到 90%，要分好几次拖。
+    const liveBounds = getSeamTrimBounds(drag.index);
+    drag.maxTrim = drag.side === 'a' ? liveBounds.bottomA : liveBounds.topB;
     // 向上拖动 = 裁掉更多该侧画面；向下拖动 = 还原，最多回到完整图片
     const next = clamp(Math.round(drag.startTrim - delta), 0, drag.maxTrim);
     if (next === getSeamTrimValue(drag.index, drag.side)) return;

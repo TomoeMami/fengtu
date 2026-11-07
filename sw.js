@@ -9,7 +9,7 @@
  * 浏览器检测到 sw.js 内容变化后才会安装新版本并换用新缓存。
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `fengtu-${VERSION}`;
 
 const PRECACHE = [
