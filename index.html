@@ -1687,7 +1687,7 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
     return bestK;
   }
 
-  function detectOverlap(A, B, aTop = 0, aBottom = 0, bTop = 0, bBottom = 0) {
+  function detectOverlap(A, B, aTop = 0, aBottom = 0, bTop = 0, bBottom = 0, allowBTopAdjust = true) {
     const W = A.width;
     const hA = A.height;
     const hB = B.height;
@@ -1703,16 +1703,26 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       cols.push(clamp(Math.round(((j + 0.5) * W) / colCount), 1, W - 2));
     }
 
+    // 逐行采样后按“这一行有多不一致”排序，丢掉最差的一小部分行再算相关。
+    // 前后两张截图之间总会有少数行对不上：状态栏时钟、悬浮通知、滚动条、
+    // 图片/表情的加载过程。它们行数不多，却足以把整体相关系数压到阈值以下，
+    // 让明明有重叠、只是重叠得很短的两张截图被判成“没有重叠”。
+    // 按行取优之后，剩下的行仍然必须高度一致才能过阈值，所以不会把无关的
+    // 两张图配到一起。
+    const KEEP_RATIO = 0.75;
+    const MIN_KEEP_ROWS = 5;
+    const MAX_ROWS = 56;
+
+    // 复用缓冲：每行 6 个充分统计量（n / sumA / sumB / sumAA / sumBB / sumAB），
+    // 再加行差和排序索引。评估会跑几百次，逐次新建数组会成为主要开销。
+    const rowDiff = new Float64Array(MAX_ROWS);
+    const rowStat = new Float64Array(MAX_ROWS * 6);
+    const rowOrder = new Int32Array(MAX_ROWS);
+
     const evaluate = (overlapHeight) => {
       if (overlapHeight < 4 || overlapHeight > maxHeight) return null;
-      const rowCount = Math.min(56, Math.max(8, overlapHeight));
-      let n = 0;
-      let sumA = 0;
-      let sumB = 0;
-      let sumAA = 0;
-      let sumBB = 0;
-      let sumAB = 0;
-      let sumAbs = 0;
+      const rowCount = Math.min(MAX_ROWS, Math.max(8, overlapHeight));
+      let rows = 0;
       for (let s = 0; s < rowCount; s += 1) {
         const offset = Math.min(overlapHeight - 1, Math.floor(((s + 0.5) * overlapHeight) / rowCount));
         const yA = hA - aBottom - overlapHeight + offset;
@@ -1720,18 +1730,66 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         if (yA < aTop || yA >= hA - aBottom || yB < bTop || yB >= hB - bBottom) continue;
         const rowA = yA * W;
         const rowB = yB * W;
+        let rowSumA = 0;
+        let rowSumB = 0;
+        let rowSumAA = 0;
+        let rowSumBB = 0;
+        let rowSumAB = 0;
+        let rowSumAbs = 0;
         for (let c = 0; c < cols.length; c += 1) {
           const x = cols[c];
           const a = A.gray[rowA + x];
           const b = B.gray[rowB + x];
-          sumA += a;
-          sumB += b;
-          sumAA += a * a;
-          sumBB += b * b;
-          sumAB += a * b;
-          sumAbs += Math.abs(a - b);
-          n += 1;
+          rowSumA += a;
+          rowSumB += b;
+          rowSumAA += a * a;
+          rowSumBB += b * b;
+          rowSumAB += a * b;
+          rowSumAbs += Math.abs(a - b);
         }
+        const base = rows * 6;
+        rowStat[base] = cols.length;
+        rowStat[base + 1] = rowSumA;
+        rowStat[base + 2] = rowSumB;
+        rowStat[base + 3] = rowSumAA;
+        rowStat[base + 4] = rowSumBB;
+        rowStat[base + 5] = rowSumAB;
+        rowDiff[rows] = rowSumAbs / cols.length;
+        rows += 1;
+      }
+      if (rows * cols.length < 40) return null;
+
+      // 按行差升序排索引（行数最多 56，插入排序最省）
+      for (let i = 0; i < rows; i += 1) rowOrder[i] = i;
+      for (let i = 1; i < rows; i += 1) {
+        const keyIndex = rowOrder[i];
+        const key = rowDiff[keyIndex];
+        let j = i - 1;
+        while (j >= 0 && rowDiff[rowOrder[j]] > key) {
+          rowOrder[j + 1] = rowOrder[j];
+          j -= 1;
+        }
+        rowOrder[j + 1] = keyIndex;
+      }
+
+      const keepCount = rows <= MIN_KEEP_ROWS ? rows : Math.max(MIN_KEEP_ROWS, Math.round(rows * KEEP_RATIO));
+      let n = 0;
+      let sumA = 0;
+      let sumB = 0;
+      let sumAA = 0;
+      let sumBB = 0;
+      let sumAB = 0;
+      let sumAbs = 0;
+      for (let s = 0; s < keepCount; s += 1) {
+        const index = rowOrder[s];
+        const base = index * 6;
+        n += rowStat[base];
+        sumA += rowStat[base + 1];
+        sumB += rowStat[base + 2];
+        sumAA += rowStat[base + 3];
+        sumBB += rowStat[base + 4];
+        sumAB += rowStat[base + 5];
+        sumAbs += rowDiff[index] * cols.length;
       }
       if (n < 40) return null;
       const meanA = sumA / n;
@@ -1748,6 +1806,45 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
       let score = (1 - r) + (mae / 255) * 0.5;
       if (varA < 1 || varB < 1) score += 0.18;
       return { h: overlapHeight, r, mae, score, varA, varB };
+    };
+
+    // 估算窗口顶部有多少行被判定为“对不上”。两张图本该重叠的内容一定一致，
+    // 顶部对不上的那些行只会是固定 UI（状态栏、导航栏）——也就是 bTop 少算了。
+    const MIN_TOP_GAP = 10;
+    const rowOffset = new Int32Array(MAX_ROWS);
+
+    const measureTopGap = (overlapHeight) => {
+      const rowCount = Math.min(MAX_ROWS, Math.max(8, overlapHeight));
+      let rows = 0;
+      for (let s = 0; s < rowCount; s += 1) {
+        const offset = Math.min(overlapHeight - 1, Math.floor(((s + 0.5) * overlapHeight) / rowCount));
+        const yA = hA - aBottom - overlapHeight + offset;
+        const yB = bTop + offset;
+        if (yA < aTop || yA >= hA - aBottom || yB < bTop || yB >= hB - bBottom) continue;
+        const rowA = yA * W;
+        const rowB = yB * W;
+        let rowAbs = 0;
+        for (let c = 0; c < cols.length; c += 1) {
+          const x = cols[c];
+          rowAbs += Math.abs(A.gray[rowA + x] - B.gray[rowB + x]);
+        }
+        rowDiff[rows] = rowAbs / cols.length;
+        rowOffset[rows] = offset;
+        rows += 1;
+      }
+      if (rows < 8) return 0;
+      const sorted = [];
+      for (let i = 0; i < rows; i += 1) sorted.push(i);
+      sorted.sort((p, q) => rowDiff[p] - rowDiff[q]);
+      // 只认“行差明显高于中位数”的顶部前缀：固定 UI 与滚动内容的差异极大，
+      // 而内容区里轻微的对不上（字体栅格、JPEG 噪声）不该被算成固定栏。
+      const medianDiff = rowDiff[sorted[Math.floor(rows / 2)]];
+      const threshold = Math.max(medianDiff * 2.5, 22);
+      let rejected = 0;
+      while (rejected < rows && rowDiff[rejected] > threshold) rejected += 1;
+      if (!rejected) return 0;
+      // rowOffset 存的已经是窗口内的行偏移，补上一个采样步长作为边界余量
+      return rowOffset[rejected - 1] + 1 + Math.round(overlapHeight / rowCount);
     };
 
     const range = maxHeight - minHeight;
@@ -1784,11 +1881,27 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
 
     if (!best) return null;
 
+    // 顶部固定栏被低估时，这段固定 UI 会混进判定窗口。认出它之后加大 bTop
+    // 再搜一次：固定栏被完整避开，重叠高度更准，很小的重叠也不会再被判丢。
+    if (allowBTopAdjust) {
+      const gap = measureTopGap(best.h);
+      const maxGap = Math.round(hB * 0.12);
+      if (gap >= MIN_TOP_GAP && gap <= maxGap && bTop + gap < maxHeight) {
+        const adjusted = detectOverlap(A, B, aTop, aBottom, bTop + gap, bBottom, false);
+        // 只有“确实更贴合”才采纳：相关明显变高，且行差不能变差。
+        // 否则说明顶部那些行不是固定栏，只是内容本身对不齐（普通照片常见）。
+        if (adjusted && adjusted.overlapComp > 0 && adjusted.r > best.r + 0.005 && adjusted.mae <= best.mae) {
+          adjusted.topAdjust = gap;
+          return adjusted;
+        }
+      }
+    }
+
     let accepted = false;
     let low = false;
     if (best.r >= 0.9 && best.mae <= 24) {
       accepted = true;
-    } else if (best.r >= 0.78 && best.mae <= 36) {
+    } else if (best.r >= 0.85 && best.mae <= 30) {
       accepted = true;
       low = true;
     }
@@ -1873,6 +1986,21 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
             compInsets.top[i + 1],
             compInsets.bottom[i + 1]
           );
+          // detectOverlap 发现顶部固定栏被低估时会返回修正量。必须同步回 insets：
+          // 接缝高度与最终裁切都以 insets 为准，不同步就会错位。
+          if (match && match.topAdjust > 0) {
+            const touched = i === 0 ? [0, i + 1] : [i + 1];
+            for (let k = 0; k < touched.length; k += 1) {
+              const index = touched[k];
+              compInsets.top[index] += match.topAdjust;
+              const insetScale = heights[index] / Math.max(1, grays[index].height);
+              topInsets[index] = clamp(Math.round(compInsets.top[index] * insetScale), 0, heights[index]);
+              if (topInsets[index] + bottomInsets[index] > heights[index] * 0.8) {
+                topInsets[index] = 0;
+                bottomInsets[index] = 0;
+              }
+            }
+          }
           const contentOutA = Math.max(0, heights[i] - topInsets[i] - bottomInsets[i]);
           const contentOutB = Math.max(0, heights[i + 1] - topInsets[i + 1] - bottomInsets[i + 1]);
           const maxOverlap = Math.max(0, Math.min(contentOutA, contentOutB));
@@ -1899,6 +2027,11 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         await sleep(100);
       }
 
+      // 首图要裁掉的顶部固定栏：同一批截图来自同一台设备，直接取各图推断值的中位数，
+      // 不只看第一对（第一对可能低估，会让长图顶部留下半截状态栏）。
+      const topValues = topInsets.filter((value) => value > 0);
+      const edgeTop = topValues.length ? Math.round(medianNumber(topValues)) : 0;
+
       state.stitch = {
         width,
         heights,
@@ -1909,13 +2042,13 @@ input[type="range"]{width:100%;accent-color:var(--brand);height:24px;cursor:poin
         autoInsets: { top: topInsets.slice(), bottom: bottomInsets.slice() },
         // 首尾与左右两侧的裁切量：默认沿用第一张顶部、最后一张底部的自动识别结果
         edges: {
-          top: topInsets[0] || 0,
+          top: edgeTop,
           bottom: bottomInsets[imageCount - 1] || 0,
           left: 0,
           right: 0
         },
         autoEdges: {
-          top: topInsets[0] || 0,
+          top: edgeTop,
           bottom: bottomInsets[imageCount - 1] || 0,
           left: 0,
           right: 0
